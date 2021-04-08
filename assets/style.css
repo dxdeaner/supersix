@@ -1,0 +1,36 @@
+@charset "utf-8";
+/* CSS Document */
+
+ .form-control{
+    margin-top: 10px;
+}
+input.btn-primary.col-xs-4.col-sm-offset-4 {
+    margin-top: 20px;
+}
+label.col-md-3.control-label {
+    margin-top: 10px;
+    font-weight: bold;
+}
+#admin_adit{
+      display: none;
+    }
+  #user-profile .table tbody tr td 
+  {
+    padding-bottom: 10px;
+    padding-top: 5px;
+  }
+  .table tbody>tr>td:first-child {
+    font-size: 1.05em;
+    font-weight: 500;
+  }
+  .table tbody>tr>td {
+    font-size: 0.875em;
+    vertical-align: middle;
+    border-top: 1px solid #e7ebee;
+    padding: 12px 8px;
+  }
+
+  .DobLbl{
+    padding-top: 18px;
+    color: #999999;
+  }

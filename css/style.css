@@ -1,0 +1,466 @@
+/* CSS Document */
+
+html, body {
+	height:101%;
+}
+
+body {
+	padding: 0 0 185px;
+	margin: 0;
+	font-family: 'Arimo', sans-serif;
+	font-size: 16px;
+	color: #2b2b2b;
+	background:#222;
+}
+
+.wrapper {
+	width:100%;
+	background:#fff;
+	padding:0 0 100px;
+}
+
+.container {
+}
+
+.navbar {
+	border-radius: 0;
+	margin-bottom:0px;
+}
+
+h1, h2 {
+	font-weight: bold;
+}
+
+h2 {
+	margin-bottom:1.1em;
+}
+
+h3 {
+	font-size:20px;
+}
+
+.dropdown-menu {
+	padding:5px 0 15px;
+}
+
+.profile_link a {
+	color:#fff;
+	margin-bottom:-7px;
+}
+.profile_link a:hover {
+	color:#fec65f;
+}
+
+.logo {
+	letter-spacing: -3px;
+	font-weight: bold;
+	font-size: 1.12em;
+	;
+}
+
+a:active, a:focus {
+	outline:none;
+}
+
+
+ol {
+}
+
+li {
+}
+
+.form-control, .btn-group-lg > .btn, .btn-lg, input {
+	border-radius:0;
+	-webkit-border-radius:0;
+}
+
+.section_row {
+	margin:0;
+	clear: both;
+}
+
+.login {
+	width:500px;
+	margin: 15px auto;
+}
+.submit_btn {
+}
+@media (max-width: 360px) { 
+	.login {
+		width:100%;
+		padding:inherit;
+	}
+	.submit_btn {
+		width:130%;
+	}
+}
+
+
+.login label {
+	font-size:1.25em;
+	padding-top:3px;
+}
+.login > div > div {
+	padding:10px 5px;
+}
+.login input[type="submit"] {
+	width:75%;
+}
+
+.submit_login {
+	width:100%;
+}
+
+.top_item {
+	padding-left: 2em;
+}
+
+.inactive {
+	color:#a9a9a9;
+	 background:#eee;
+	 padding:13px 15px;
+}
+/*
+.form-control {
+	border: 0 0 1px 0;
+	border-radius:0;
+	box-shadow: none;
+}
+
+.form-control[type="text"] {
+	border-top: 0;
+	border-right: 0;
+	border-left: 0;
+	box-shadow: none;
+	border-radius: 0;
+	border-color: #414141 !important;
+	font-weight: 100;
+	font-size: 1.2em;
+}
+
+.form-control[type="text"]:focus {
+	box-shadow:none;
+}
+*/
+.master_list .form-control[type="text"]:focus {
+	background:#fffae2;
+	transition: background-color .3s;
+	-webkit-transition: background-color .3s;
+}
+.completed_list .form-control[type="text"] {
+	background:#f4f4f4;
+	color:#999;
+	border:0 !important;
+}
+
+textarea.form-control {
+	border: 0;
+	height:auto;
+}
+textarea {
+	font-weight:100;
+}
+textarea:focus {
+	box-shadow:none !important;
+	background:#c3e6d6;
+	transition: background-color .3s;
+	-webkit-transition: background-color .3s;
+}
+
+.navbar {
+	color:#fff;
+}
+
+.navbar-right {
+	margin-right:15px;
+	padding:15px;
+	font-size:1.7em;
+	font-weight:600;
+}
+
+.ti_list_description {
+	padding: 12px 0;
+}
+
+.master_list {
+	counter-reset: my-badass-counter;
+}
+
+.master_list dt {
+	position: relative;
+	font: bold 16px ;
+	padding: 4px 0 10px 0;
+}
+
+.master_list dt:before {
+	content: counter(my-badass-counter);
+	counter-increment: my-badass-counter;
+	position: absolute;
+	left: 0;
+	top: 0;
+	font: bold 65px/1.2 "Arimo";
+	color:#ef846a;
+}
+
+.master_list dd {
+	margin: 0 0 35px 0;
+	font-size:.9em;
+}
+.master_list dd h4 {
+	color:#7bc9a5;
+	font-weight:bold;
+	font-size:1.05em;
+	margin-left:12px;
+}
+
+.master_list dt, .master_list dd {
+	padding-left: 50px;
+}
+.master_list_height {
+	min-height:10.1em;
+}
+
+.ss_section {
+}
+
+.rows {
+	clear:both;
+	/*min-height: 10.5em;*/
+}
+
+.action_box, .action_box div {
+	padding:0;
+	margin:0;
+}
+.action_box_bg {
+	background:url(../images/flyout-box-muted.jpg) no-repeat top center;
+}
+
+.complete, .postpone, .delete, .delete_half, .save, .restore, .moveup, .movedown, .assign, .assigned_half, .duplicate, .futures, .assigned {
+	width:100%;
+	color:#fff;
+	text-align:center;
+	cursor:pointer;
+	font-size: 1.6em;
+	min-height: 1.8em;
+	padding-top: 0.4em !important;
+	text-shadow:.5px .5px 0 #222;
+}
+
+.complete {
+	background:#6fa985; /*light green*/
+}
+.complete:hover {
+	background:#23925f; /*green*/
+}
+
+.postpone {
+	background:#ffd68c; /*light yellow*/
+}
+.postpone:hover {
+	background:#fec65f; /*yellow*/
+}
+
+.delete {
+	background:#ce6f52; /*light red*/
+}
+.delete:hover {
+	background:#c0310e; /*red*/
+}
+
+.save {
+	background:#88d2e4; /*light blue*/
+	border:0 none;
+	padding-top: 3px !important;
+}
+.save:hover {
+	background:#4AC3DA; /*blue*/
+}
+
+.duplicate {
+	background:#edb363; /*light orange*/
+}
+.duplicate:hover {
+	background:#e69724; /*orange*/
+}
+
+.assign {
+	background:#ac89a6; /*light purple*/
+}
+.assign:hover {
+	background:#93658d; /*purple*/
+}
+
+.restore  {
+	background:#edb363; /*light purple*/
+	border:0 none;
+	padding-top: 0 !important;
+}
+.restore:hover {
+	background:#e69724; /*purple*/
+}
+
+.assigned  {
+	background:#ac89a6; /*light purple*/
+	border:0 none;
+}
+.assigned:hover {
+	background:#93658d; /*purple*/
+}
+
+.futures  {
+	background:#ffd68c; /*light purple*/
+	border:0 none;
+}
+.futures:hover {
+	background:#7bc9a5; /*purple*/
+}
+
+.moveup  {
+	background:#777; /*light grey2*/
+	width:50% !important;
+}
+.moveup:hover {
+	background:#444; /*grey2*/
+}
+
+.movedown  {
+	background:#888; /*light grey1*/
+	width:50% !important;
+}
+.movedown:hover {
+	background:#444; /*grey1*/
+}
+
+.assigned_task, .futures_task, .nss_task {
+	min-height:3.2em;
+	padding-top:12px;
+	padding-bottom:10px;
+}
+
+
+
+.spacer {
+	clear:both;
+	margin:50px 0;
+}
+
+.hr {
+	height:1px;
+	background:#c5c5c5;
+	width:100%;
+}
+
+.tabbable dl {
+	margin-top:40px;
+}
+
+.tabbable .rows {
+	padding-top:20px;
+}
+
+.nav-tabs {
+	border-bottom-width:1px;
+}
+
+
+
+.clicker {
+	cursor:pointer;
+}
+
+
+
+.register_submit {
+	margin-top:40px;
+}
+.register_submit button {
+    font-size: 25px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    padding: 0.6em 100px;
+}
+
+/* CSS Document */
+@media (max-width: 409px) { 
+	.register_submit button {
+		width:100%;
+		padding:inherit;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+.footer {
+	/*background:#2d2d2d;*/
+	width:100%;
+	padding:25px 0 50px;
+	font-size:.9em;
+	color:#EBEBEB;
+	text-align:center;
+}
+.footer span.logo {
+	font-size:2em !important;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.hover_show > div {
+	display:none;
+}
+.hover_show > div:first-child, .hover_show > div:first-child {
+	display:block;
+}
+.hover_show > div:hover + div, .hover_hide:hover {
+    display: block;
+}
+
+
+
+
+
+
+
+
+
+
+/*********************USER PROFILE ***************************/
+
+.user_details {
+	width: 87%;
+	margin: 20px 70px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

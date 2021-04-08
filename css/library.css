@@ -1,0 +1,247 @@
+/* CSS Document */
+
+
+
+.hideme {
+	display:none;
+}
+
+.pointer {
+	cursor:pointer;
+}
+
+
+
+
+
+
+/*******COLORS********************/
+
+.black {
+	color:#000;
+}
+.black_bg {
+	background:#000;
+}
+
+.white {
+	color:#fff;
+}
+.white_bg {
+	background:#fff;
+}
+
+.grey {
+	color:#999;
+}
+.grey-light {
+	color:#7c7c7c;
+}
+
+.red {
+	color: #ef6746; 
+}
+
+.orange {
+	color:#e69724;
+}
+
+.yellow {
+	color: #fec65f;
+}
+
+.green {
+	color: #7bc9a5;
+}
+
+.blue {
+	color: #4cc3d9;
+}
+
+.purple {
+	color: #93658d;
+}
+
+.grey {
+	color: #414141;
+}
+
+
+
+
+
+
+
+
+/*******TEXT STYLES********************/
+
+.bold {
+	font-weight:bold;
+}
+
+.italic {
+	font-style:italic;
+}
+
+.underline {
+	text-decoration:underline;
+}
+
+.center {
+	text-align:center;
+}
+
+.titlecase {
+	text-transform:capitalize;
+}
+
+.caps {
+	text-transform:uppercase;
+}
+
+
+.bold {
+	font-weight:bold;
+}
+.heavy {
+	font-weight:600;
+}
+.heavier {
+	font-weight:800;
+}
+
+.big {
+	font-size:1.2em;
+}
+.bigger {
+	font-size:1.5em;
+}
+.biggest {
+	font-size:2em;
+}
+.huge {
+	font-size:3em;
+}
+
+.small {
+	font-size:.85em;
+}
+
+.smaller {
+	font-size:.75em;
+}
+
+.noshadow {
+	text-shadow:none;
+}
+
+
+
+
+
+
+
+
+/*******CONTAINERS********************/
+
+.width_100 {
+	width:100% !important;
+}
+
+.width_50 {
+	width:50% !important;
+}
+
+.width_25 {
+	width:25% !important;
+}
+
+.width_75 {
+	width:75% !important;
+}
+
+
+.hover_grey:hover {
+	background:#eee;
+}
+
+
+.clear {
+	clear:both;
+}
+
+.rounded {
+	border-radius:10px;
+	-webkit-border-radius:10px;
+}
+
+.bordered {
+	border:1px #ccc solid;
+}
+
+.padded {
+	padding:15px;
+}
+
+
+
+.border_bottom {
+	border-bottom:1px #ccc solid;
+}
+
+.indent {
+	padding-left:25px;
+}
+
+.spacer_25 {
+	height:25px;
+}
+
+.spacer_50 {
+	height:50px;
+}
+
+.spacer_75 {
+	height:75px;
+}
+
+.spacer_100 {
+	height:100px;
+}
+
+.no_margin {
+	margin:0px !important;
+}
+
+
+
+
+
+
+
+
+
+/**********************************************
+RESPONSIVE
+**********************************************/
+
+@media (min-width: 768px) and (max-width: 1169px) {
+}
+@media (max-width: 1169px) {
+}
+
+
+@media (min-width: 481px) and (max-width: 767px) {
+	
+}
+
+
+@media (max-width: 480px) {
+	
+}
+
+
+
+
+
+
