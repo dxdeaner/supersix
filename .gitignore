@@ -1,0 +1,28 @@
+# Sensitive configuration files
+config.php
+*.log
+.env
+.env.local
+.env.production
+
+# Database backups
+*.sql
+*.sqlite
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+temp/
+tmp/
+cache/
+_Archive/
+_SQL/
+.vscode/
