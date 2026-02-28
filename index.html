@@ -6,6 +6,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SuperSix - Tasks Simplified</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <!-- Add these lines to your <head> section in index.html -->
+
+  <!-- Web App Manifest -->
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- Apple Touch Icons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="144x144" href="/apple-touch-icon-144x144.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png">
+  <!-- Android Chrome Icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png">
+  <!-- Standard Favicons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <!-- Theme color for Android -->
+  <meta name="theme-color" content="#0891b2">
+  <!-- Apple Web App settings -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SuperSix">
+
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -76,6 +99,14 @@
 
     // API Service with authentication
     const api = {
+      // Add callback for handling authentication failures
+      onAuthFailure: null,
+
+      // Method to set the auth failure callback
+      setAuthFailureCallback(callback) {
+        this.onAuthFailure = callback;
+      },
+
       async request(endpoint, options = {}) {
         const url = `${API_BASE_URL}${endpoint}`;
         const config = {
@@ -90,8 +121,11 @@
         const response = await fetch(url, config);
 
         if (response.status === 401) {
-          // User not authenticated, but don't auto-redirect
-          throw new Error('Not authenticated');  // THIS handles it properly
+          // Handle session expiration globally
+          if (this.onAuthFailure) {
+            this.onAuthFailure('session_expired');
+          }
+          throw new Error('Session expired');
         }
 
         if (!response.ok) {
@@ -605,14 +639,13 @@
             <div className="flex justify-between items-start mb-2">
               <h3 className="font-medium text-white flex-1 mr-4">{task.title}</h3>
               {task.dueDate && (
-                <div className="bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                  {new Date(task.dueDate).toLocaleString('en-US', {
-                    timeZone: 'America/Los_Angeles',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit'
-                  })}
+                <div className="flex items-center space-x-1">
+                  {new Date(task.dueDate) < new Date() && (
+                    <span className="text-red-400 font-bold text-sm">!</span>
+                  )}
+                  <div className={`${new Date(task.dueDate) < new Date() ? 'bg-red-500' : 'bg-orange-500'} text-white px-2 py-1 rounded-full text-xs font-medium`}>
+                    {new Date(task.dueDate).toLocaleString()}
+                  </div>
                 </div>
               )}
             </div>
@@ -697,14 +730,13 @@
               <div className="flex items-center space-x-2 mb-1">
                 <h4 className="text-white font-medium">{task.title}</h4>
                 {task.dueDate && (
-                  <div className="bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                    {new Date(task.dueDate).toLocaleString('en-US', {
-                      timeZone: 'America/Los_Angeles',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit'
-                    })}
+                  <div className="flex items-center space-x-1">
+                    {new Date(task.dueDate) < new Date() && (
+                      <span className="text-red-400 font-bold text-sm">!</span>
+                    )}
+                    <div className={`${new Date(task.dueDate) < new Date() ? 'bg-red-500' : 'bg-orange-500'} text-white px-2 py-1 rounded-full text-xs font-medium`}>
+                      {new Date(task.dueDate).toLocaleString()}
+                    </div>
                   </div>
                 )}
               </div>
@@ -865,12 +897,82 @@
       );
     };
 
+    // Quick Add Task Modal Component
+    const QuickAddModal = ({ isOpen, onClose, onAdd, loading }) => {
+      const [newTask, setNewTask] = useState('');
+
+      const handleAdd = () => {
+        if (newTask.trim()) {
+          onAdd(newTask.trim());
+          setNewTask('');
+          onClose();
+        }
+      };
+
+      const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+          handleAdd();
+        }
+      };
+
+      if (!isOpen) return null;
+
+      return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-slate-700">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-white">Add Task To Queue</h2>
+              <button
+                onClick={onClose}
+                className="text-slate-400 hover:text-white"
+              >
+                <Icon name="x" size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-slate-300 text-sm font-medium mb-1">
+                  Task Title
+                </label>
+                <input
+                  type="text"
+                  value={newTask}
+                  onChange={(e) => setNewTask(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
+                  placeholder="What needs to get done?"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-2 justify-end mt-6">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAdd}
+                disabled={!newTask.trim() || loading}
+                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded transition-colors"
+              >
+                {loading ? 'Adding...' : 'Add Task'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     const App = () => {
       // Haiku collection
       const haikus = [
-        "Keep it simple now, Laser focus, step by step— Relentless progress.",
-        "Keep it simple, clear— Focused breath, unbroken stride. Progress never stops.",
-        "Cut through noise and fog, Eyes forward, blade sharp with will— Relentless advance.",
+        "Keep it simple now, Laser focus, step by stepâ€” Relentless progress.",
+        "Keep it simple, clearâ€” Focused breath, unbroken stride. Progress never stops.",
+        "Cut through noise and fog, Eyes forward, blade sharp with willâ€” Relentless advance.",
         "River carves through stone, Quiet, steady, unyielding. Simple, focused path."
       ];
       // Select random haiku on component mount
@@ -1045,11 +1147,28 @@
       const [editingBoard, setEditingBoard] = useState(null);
       const [newBoardName, setNewBoardName] = useState('');
       const [boardMenuOpen, setBoardMenuOpen] = useState(null);
+      const [showQuickAddModal, setShowQuickAddModal] = useState(false);
+      const [sessionExpired, setSessionExpired] = useState(false);
 
       // Check authentication on app load
       useEffect(() => {
         checkAuth();
       }, []);
+
+      // Set up auth failure handler only for authenticated users
+      useEffect(() => {
+        if (user) {
+          // Only set up session expiry handling for authenticated users
+          api.setAuthFailureCallback((reason) => {
+            if (reason === 'session_expired') {
+              handleSessionExpiry();
+            }
+          });
+        } else {
+          // Clear the handler when no user
+          api.setAuthFailureCallback(null);
+        }
+      }, [user]);
 
       // Load boards when user changes
       useEffect(() => {
@@ -1102,6 +1221,8 @@
       const handleAuthSuccess = (userData) => {
         setUser(userData);
         setError(null);
+        setSessionExpired(false); // Clear session expired flag
+        setShowAuthModal(false);
       };
 
       const handleLogout = () => {
@@ -1109,7 +1230,25 @@
         setBoards([]);
         setTasks([]);
         setCurrentBoard(null);
+        setSubtasks({});
+        setLoadingSubtasks({});
         setError(null);
+        setSessionExpired(false);
+
+        // Close any open modals
+        setShowAuthModal(false);
+        setEditingTask(null);
+        setShowBoardModal(false);
+        setEditingBoard(null);
+        setBoardMenuOpen(null);
+        setSidebarOpen(false);
+      };
+
+      // New session expiry handler - ADD THIS AFTER handleLogout
+      const handleSessionExpiry = () => {
+        handleLogout(); // Clear all state
+        setSessionExpired(true); // Flag that session expired
+        setShowAuthModal(true); // Show auth modal immediately
       };
 
       // API functions (unchanged but now require authentication)
@@ -1355,9 +1494,14 @@
           <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
             <div className="text-center max-w-md mx-4">
               <img src="/SuperSix-Logo.png" alt="SuperSix" className="h-16 mx-auto mb-8" />
-              <h1 className="text-3xl font-bold text-white mb-4">Welcome to SuperSix</h1>
+              <h1 className="text-3xl font-bold text-white mb-4">
+                {sessionExpired ? 'Session Expired' : 'Welcome to SuperSix'}
+              </h1>
               <p className="text-slate-300 whitespace-pre-line italic font-light leading-relaxed mb-8">
-                {selectedHaiku}
+                {sessionExpired
+                  ? 'Your session has expired for security. Please sign in again to continue.'
+                  : selectedHaiku
+                }
               </p>
               <div className="flex space-x-4 justify-center">
                 <button
@@ -1369,21 +1513,26 @@
                 >
                   Sign In
                 </button>
-                <button
-                  onClick={() => {
-                    setAuthModalMode('register');
-                    setShowAuthModal(true);
-                  }}
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                >
-                  Create Account
-                </button>
+                {!sessionExpired && (
+                  <button
+                    onClick={() => {
+                      setAuthModalMode('register');
+                      setShowAuthModal(true);
+                    }}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                  >
+                    Create Account
+                  </button>
+                )}
               </div>
             </div>
 
             <AuthModal
               isOpen={showAuthModal}
-              onClose={() => setShowAuthModal(false)}
+              onClose={() => {
+                setShowAuthModal(false);
+                setSessionExpired(false); // Clear expired flag if user cancels
+              }}
               onAuthSuccess={handleAuthSuccess}
               mode={authModalMode}
             />
@@ -1612,8 +1761,16 @@
                 </div>
               )}
 
-              {/* Tab Navigation */}
-              <div className="flex justify-center mb-6">
+              {/* Tab Navigation with Add Button */}
+              <div className={`mb-6 ${windowWidth >= 768 ? 'relative flex justify-center' : 'flex justify-center items-center space-x-4'}`}>
+                <button
+                  onClick={() => setShowQuickAddModal(true)}
+                  className={`w-10 h-10 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center transition-all hover:shadow-lg shadow-orange-500/20 ${windowWidth >= 768 ? 'absolute left-0 top-1/2 transform -translate-y-1/2' : ''}`}
+                  title="Add new task"
+                >
+                  <Icon name="plus" size={20} />
+                </button>
+
                 <div className="bg-slate-800 rounded-lg p-1">
                   <button
                     onClick={() => setActiveTab('active')}
@@ -1775,6 +1932,22 @@
           </div>
 
           {/* Modals */}
+
+          {/* Quick Add Task Modal */}
+          <QuickAddModal
+            isOpen={showQuickAddModal}
+            onClose={() => setShowQuickAddModal(false)}
+            onAdd={(taskTitle) => {
+              if (currentBoard) {
+                api.createTask(currentBoard, taskTitle).then(() => {
+                  loadTasks();
+                }).catch(err => {
+                  setError('Failed to add task: ' + err.message);
+                });
+              }
+            }}
+            loading={loading}
+          />
 
           {/* Auth Modal */}
           <AuthModal

@@ -3,7 +3,7 @@
 require_once 'config.php';
 
 // Start session for authentication
-session_start();
+//session_start(); // Moved to individual functions 2025.08.30
 
 $database = new Database();
 $pdo = $database->connect();
@@ -97,17 +97,30 @@ function registerUser($pdo)
         // Send verification email
         sendVerificationEmail($data['email'], $data['name'], $verificationToken);
 
+        // Handle "Remember Me" - set session parameters BEFORE starting session
+        if (isset($data['remember']) && $data['remember']) {
+            // Set session to expire in 30 days
+            ini_set('session.gc_maxlifetime', 30 * 24 * 60 * 60);
+            session_set_cookie_params([
+                'lifetime' => 30 * 24 * 60 * 60, // 30 days
+                'path' => '/',
+                'domain' => '',
+                'secure' => isset($_SERVER['HTTPS']), // Secure if HTTPS
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+        }
+
+        // Start session with proper parameters
+        session_start();
+
+        // Regenerate session ID for security
+        session_regenerate_id(true);
+
         // Log user in immediately
         $_SESSION['user_id'] = $userId;
         $_SESSION['user_email'] = $data['email'];
         $_SESSION['user_name'] = $data['name'];
-
-        // Handle "Remember Me" - extend session if requested
-        if (isset($data['remember']) && $data['remember']) {
-            // Set session to expire in 30 days
-            ini_set('session.gc_maxlifetime', 30 * 24 * 60 * 60);
-            session_set_cookie_params(30 * 24 * 60 * 60);
-        }
 
         sendResponse([
             'message' => 'Registration successful',
@@ -143,17 +156,28 @@ function loginUser($pdo)
             sendResponse(['error' => 'Invalid email or password'], 401);
         }
 
+        // Handle "Remember Me" - set session parameters BEFORE starting session
+        if (isset($data['remember']) && $data['remember']) {
+            // Set session to expire in 30 days
+            ini_set('session.gc_maxlifetime', 30 * 24 * 60 * 60);
+            session_set_cookie_params([
+                'lifetime' => 30 * 24 * 60 * 60, // 30 days
+                'path' => '/',
+                'domain' => '',
+                'secure' => isset($_SERVER['HTTPS']), // Secure if HTTPS
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+        }
+
+        // Start session with proper parameters
+        session_start();
+
         // Log user in
         session_regenerate_id(true); // Security: regenerate session ID
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_name'] = $user['name'];
-
-        // Handle "Remember Me"
-        if (isset($data['remember']) && $data['remember']) {
-            ini_set('session.gc_maxlifetime', 30 * 24 * 60 * 60);
-            session_set_cookie_params(30 * 24 * 60 * 60);
-        }
 
         sendResponse([
             'message' => 'Login successful',
@@ -173,6 +197,11 @@ function loginUser($pdo)
 
 function logoutUser()
 {
+    // Start session if not already started to destroy it
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
     session_destroy();
 
     // Clear session cookie
@@ -185,6 +214,9 @@ function logoutUser()
 
 function getCurrentUser($pdo)
 {
+    // Start session to check authentication
+    session_start();
+
     if (!isset($_SESSION['user_id'])) {
         sendResponse(['error' => 'Not authenticated'], 401);
     }
@@ -309,6 +341,7 @@ function verifyEmail($pdo)
 
 function resendVerificationEmail($pdo)
 {
+    // Start session to check authentication
     session_start();
 
     if (!isset($_SESSION['user_id'])) {

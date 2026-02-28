@@ -4,6 +4,13 @@ config.php
 .env
 .env.local
 .env.production
+SuperSixApp.code-workspace
+Superix.code-workspace
+
+# Debug/test files (expose system info)
+api/debug.php
+api/auth_test.php
+api/api_test.php
 
 # Database backups
 *.sql
