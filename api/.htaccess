@@ -1,0 +1,14 @@
+# Deny access to debug and test files
+<FilesMatch "^(debug|api_test|auth_test)\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Deny access to example/template files
+<FilesMatch "\.example\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Prevent directory listing
+Options -Indexes

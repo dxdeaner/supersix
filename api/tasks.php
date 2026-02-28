@@ -2,8 +2,13 @@
 // tasks.php - Task Management API with User Authentication
 require_once 'config.php';
 
-// Start session for authentication
-session_start();
+// Start secure session
+startSecureSession();
+
+// Validate CSRF token on state-changing requests
+if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'DELETE'])) {
+    validateCsrf();
+}
 
 $database = new Database();
 $pdo = $database->connect();
@@ -112,7 +117,12 @@ function createTask($pdo) {
     
     $data = getJsonInput();
     validateRequired($data, ['board_id', 'title']);
-    
+
+    enforceMaxLengths($data, [
+        'title'       => MAX_LENGTHS['task_title'],
+        'description' => MAX_LENGTHS['description'],
+    ]);
+
     try {
         // Verify board ownership
         $stmt = $pdo->prepare("SELECT id FROM boards WHERE id = ? AND user_id = ?");
@@ -179,7 +189,12 @@ function updateTask($pdo) {
     
     $data = getJsonInput();
     validateRequired($data, ['id', 'title']);
-    
+
+    enforceMaxLengths($data, [
+        'title'       => MAX_LENGTHS['task_title'],
+        'description' => MAX_LENGTHS['description'],
+    ]);
+
     try {
         // Verify task belongs to user (through board ownership)
         $stmt = $pdo->prepare("
@@ -543,17 +558,24 @@ function reorderTask($pdo) {
             sendResponse(['error' => 'Task not found or access denied'], 404);
         }
         
-        // Get adjacent task
-        $operator = $data['direction'] === 'up' ? '<' : '>';
-        $orderBy = $data['direction'] === 'up' ? 'DESC' : 'ASC';
-        
-        $stmt = $pdo->prepare("
-            SELECT id, position 
-            FROM tasks 
-            WHERE board_id = ? AND status = ? AND position $operator ?
-            ORDER BY position $orderBy 
-            LIMIT 1
-        ");
+        // Get adjacent task (explicit queries to avoid SQL interpolation)
+        if (!in_array($data['direction'], ['up', 'down'], true)) {
+            sendResponse(['error' => 'Direction must be "up" or "down"'], 400);
+        }
+
+        if ($data['direction'] === 'up') {
+            $stmt = $pdo->prepare("
+                SELECT id, position FROM tasks
+                WHERE board_id = ? AND status = ? AND position < ?
+                ORDER BY position DESC LIMIT 1
+            ");
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT id, position FROM tasks
+                WHERE board_id = ? AND status = ? AND position > ?
+                ORDER BY position ASC LIMIT 1
+            ");
+        }
         $stmt->execute([$task['board_id'], $task['status'], $task['position']]);
         $adjacentTask = $stmt->fetch();
         

@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SuperSix - Tasks Simplified</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <!-- Add these lines to your <head> section in index.html -->
+  <!-- Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://unpkg.com https://cdnjs.cloudflare.com https://cdn.tailwindcss.com 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self'; img-src 'self' data:; font-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self';">
 
   <!-- Web App Manifest -->
   <link rel="manifest" href="/manifest.json">
@@ -99,33 +100,75 @@
 
     // API Service with authentication
     const api = {
-      // Add callback for handling authentication failures
       onAuthFailure: null,
+      csrfToken: null,
 
-      // Method to set the auth failure callback
       setAuthFailureCallback(callback) {
         this.onAuthFailure = callback;
       },
 
+      async fetchCsrfToken() {
+        if (!this.csrfToken) {
+          const res = await fetch(`${API_BASE_URL}/auth.php?action=csrf`, {
+            credentials: 'include',
+          });
+          if (res.ok) {
+            const data = await res.json();
+            this.csrfToken = data.csrf_token;
+          }
+        }
+        return this.csrfToken;
+      },
+
+      clearCsrfToken() {
+        this.csrfToken = null;
+      },
+
       async request(endpoint, options = {}) {
         const url = `${API_BASE_URL}${endpoint}`;
+        const method = (options.method || 'GET').toUpperCase();
+        const isMutating = ['POST', 'PUT', 'DELETE'].includes(method);
+
+        const headers = {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        };
+
+        if (isMutating) {
+          const token = await this.fetchCsrfToken();
+          if (token) {
+            headers['X-CSRF-Token'] = token;
+          }
+        }
+
         const config = {
-          headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-          },
-          credentials: 'include', // Include cookies for session management
           ...options,
+          headers,
+          credentials: 'include',
         };
 
         const response = await fetch(url, config);
 
         if (response.status === 401) {
-          // Handle session expiration globally
           if (this.onAuthFailure) {
             this.onAuthFailure('session_expired');
           }
           throw new Error('Session expired');
+        }
+
+        if (response.status === 403) {
+          // CSRF token may have expired — clear and retry once
+          this.clearCsrfToken();
+          const retryToken = await this.fetchCsrfToken();
+          if (retryToken) {
+            headers['X-CSRF-Token'] = retryToken;
+            const retryResponse = await fetch(url, { ...config, headers });
+            if (!retryResponse.ok) {
+              const error = await retryResponse.json().catch(() => ({ error: 'Request failed' }));
+              throw new Error(error.error || `HTTP ${retryResponse.status}`);
+            }
+            return retryResponse.json();
+          }
         }
 
         if (!response.ok) {
@@ -322,9 +365,12 @@
           if (isLogin) {
             result = await api.login(formData.email, formData.password, formData.remember);
           } else {
-            if (formData.password.length < 8) {
-              throw new Error('Password must be at least 8 characters long');
-            }
+            // Client-side password strength validation
+            const pw = formData.password;
+            if (pw.length < 8) throw new Error('Password must be at least 8 characters long');
+            if (!/[A-Z]/.test(pw)) throw new Error('Password must contain at least one uppercase letter');
+            if (!/[a-z]/.test(pw)) throw new Error('Password must contain at least one lowercase letter');
+            if (!/[0-9]/.test(pw)) throw new Error('Password must contain at least one number');
             result = await api.register(formData.name, formData.email, formData.password, formData.remember);
           }
 
@@ -1226,6 +1272,7 @@
       };
 
       const handleLogout = () => {
+        api.clearCsrfToken();
         setUser(null);
         setBoards([]);
         setTasks([]);

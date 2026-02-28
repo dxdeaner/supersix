@@ -2,8 +2,13 @@
 // subtasks.php - Subtask Management API
 require_once 'config.php';
 
-// Start session for authentication
-session_start();
+// Start secure session
+startSecureSession();
+
+// Validate CSRF token on state-changing requests
+if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'DELETE'])) {
+    validateCsrf();
+}
 
 $database = new Database();
 $pdo = $database->connect();
@@ -96,7 +101,9 @@ function createSubtask($pdo) {
     
     $data = getJsonInput();
     validateRequired($data, ['task_id', 'title']);
-    
+
+    enforceMaxLengths($data, ['title' => MAX_LENGTHS['title']]);
+
     try {
         // Verify task belongs to user
         $stmt = $pdo->prepare("
@@ -179,14 +186,17 @@ function toggleSubtask($pdo) {
         }
         
         $newCompleted = !$subtask['completed'];
-        $completedAt = $newCompleted ? 'NOW()' : 'NULL';
-        
-        $stmt = $pdo->prepare("
-            UPDATE subtasks 
-            SET completed = ?, completed_at = $completedAt 
-            WHERE id = ?
-        ");
-        $stmt->execute([$newCompleted, $data['id']]);
+
+        if ($newCompleted) {
+            $stmt = $pdo->prepare("
+                UPDATE subtasks SET completed = 1, completed_at = NOW() WHERE id = ?
+            ");
+        } else {
+            $stmt = $pdo->prepare("
+                UPDATE subtasks SET completed = 0, completed_at = NULL WHERE id = ?
+            ");
+        }
+        $stmt->execute([$data['id']]);
         
         sendResponse(['message' => 'Subtask updated successfully']);
     } catch (PDOException $e) {

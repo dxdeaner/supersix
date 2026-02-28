@@ -2,8 +2,13 @@
 // boards.php - Board Management API with User Authentication
 require_once 'config.php';
 
-// Start session for authentication
-session_start();
+// Start secure session
+startSecureSession();
+
+// Validate CSRF token on state-changing requests
+if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'DELETE'])) {
+    validateCsrf();
+}
 
 $database = new Database();
 $pdo = $database->connect();
@@ -72,15 +77,22 @@ function createBoard($pdo) {
     $userId = $_SESSION['user_id'];
     $data = getJsonInput();
     validateRequired($data, ['name']);
-    
+
+    enforceMaxLengths($data, [
+        'name'  => MAX_LENGTHS['board_name'],
+        'color' => MAX_LENGTHS['color'],
+    ]);
+
     try {
         $stmt = $pdo->prepare("
-            INSERT INTO boards (user_id, name, color, archived) 
+            INSERT INTO boards (user_id, name, color, archived)
             VALUES (?, ?, ?, ?)
         ");
-        
-        $colors = ['cyan', 'green', 'blue', 'purple', 'pink', 'yellow'];
-        $color = $data['color'] ?? $colors[array_rand($colors)];
+
+        $allowedColors = ['cyan', 'green', 'blue', 'purple', 'pink', 'yellow'];
+        $color = (isset($data['color']) && in_array($data['color'], $allowedColors, true))
+            ? $data['color']
+            : $allowedColors[array_rand($allowedColors)];
         
         $stmt->execute([
             $userId,
@@ -140,10 +152,12 @@ function updateBoard($pdo) {
     $userId = $_SESSION['user_id'];
     $data = getJsonInput();
     validateRequired($data, ['id', 'name']);
-    
+
+    enforceMaxLengths($data, ['name' => MAX_LENGTHS['board_name']]);
+
     try {
         $stmt = $pdo->prepare("
-            UPDATE boards 
+            UPDATE boards
             SET name = ?
             WHERE id = ? AND user_id = ?
         ");

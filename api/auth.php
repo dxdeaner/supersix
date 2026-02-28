@@ -2,8 +2,7 @@
 // auth.php - Authentication API (Production Version)
 require_once 'config.php';
 
-// Start session for authentication
-//session_start(); // Moved to individual functions 2025.08.30
+// Sessions started per-function via startSecureSession()
 
 $database = new Database();
 $pdo = $database->connect();
@@ -15,6 +14,9 @@ switch ($method) {
         switch ($path) {
             case 'me':
                 getCurrentUser($pdo);
+                break;
+            case 'csrf':
+                getCsrfToken();
                 break;
             case 'verify':
                 verifyEmail($pdo);
@@ -47,17 +49,27 @@ switch ($method) {
 
 function registerUser($pdo)
 {
+    checkRateLimit('register_' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'), 5, 900);
+
     $data = getJsonInput();
     validateRequired($data, ['name', 'email', 'password']);
+
+    // Input length validation
+    enforceMaxLengths($data, [
+        'name'     => MAX_LENGTHS['name'],
+        'email'    => MAX_LENGTHS['email'],
+        'password' => MAX_LENGTHS['password'],
+    ]);
 
     // Validate email format
     if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
         sendResponse(['error' => 'Invalid email format'], 400);
     }
 
-    // Validate password length
-    if (strlen($data['password']) < 8) {
-        sendResponse(['error' => 'Password must be at least 8 characters long'], 400);
+    // Validate password strength
+    $passwordError = validatePasswordStrength($data['password']);
+    if ($passwordError !== null) {
+        sendResponse(['error' => $passwordError], 400);
     }
 
     try {
@@ -97,27 +109,11 @@ function registerUser($pdo)
         // Send verification email
         sendVerificationEmail($data['email'], $data['name'], $verificationToken);
 
-        // Handle "Remember Me" - set session parameters BEFORE starting session
-        if (isset($data['remember']) && $data['remember']) {
-            // Set session to expire in 30 days
-            ini_set('session.gc_maxlifetime', 30 * 24 * 60 * 60);
-            session_set_cookie_params([
-                'lifetime' => 30 * 24 * 60 * 60, // 30 days
-                'path' => '/',
-                'domain' => '',
-                'secure' => isset($_SERVER['HTTPS']), // Secure if HTTPS
-                'httponly' => true,
-                'samesite' => 'Lax'
-            ]);
-        }
-
-        // Start session with proper parameters
-        session_start();
-
-        // Regenerate session ID for security
+        // Start secure session and log user in
+        $remember = isset($data['remember']) && $data['remember'];
+        startSecureSession($remember);
         session_regenerate_id(true);
 
-        // Log user in immediately
         $_SESSION['user_id'] = $userId;
         $_SESSION['user_email'] = $data['email'];
         $_SESSION['user_name'] = $data['name'];
@@ -140,8 +136,15 @@ function registerUser($pdo)
 
 function loginUser($pdo)
 {
+    checkRateLimit('login_' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'), 10, 900);
+
     $data = getJsonInput();
     validateRequired($data, ['email', 'password']);
+
+    enforceMaxLengths($data, [
+        'email'    => MAX_LENGTHS['email'],
+        'password' => MAX_LENGTHS['password'],
+    ]);
 
     try {
         $stmt = $pdo->prepare("
@@ -156,25 +159,10 @@ function loginUser($pdo)
             sendResponse(['error' => 'Invalid email or password'], 401);
         }
 
-        // Handle "Remember Me" - set session parameters BEFORE starting session
-        if (isset($data['remember']) && $data['remember']) {
-            // Set session to expire in 30 days
-            ini_set('session.gc_maxlifetime', 30 * 24 * 60 * 60);
-            session_set_cookie_params([
-                'lifetime' => 30 * 24 * 60 * 60, // 30 days
-                'path' => '/',
-                'domain' => '',
-                'secure' => isset($_SERVER['HTTPS']), // Secure if HTTPS
-                'httponly' => true,
-                'samesite' => 'Lax'
-            ]);
-        }
-
-        // Start session with proper parameters
-        session_start();
-
-        // Log user in
-        session_regenerate_id(true); // Security: regenerate session ID
+        // Start secure session and log user in
+        $remember = isset($data['remember']) && $data['remember'];
+        startSecureSession($remember);
+        session_regenerate_id(true);
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_name'] = $user['name'];
@@ -197,10 +185,8 @@ function loginUser($pdo)
 
 function logoutUser()
 {
-    // Start session if not already started to destroy it
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    startSecureSession();
+    validateCsrf();
 
     session_destroy();
 
@@ -214,8 +200,7 @@ function logoutUser()
 
 function getCurrentUser($pdo)
 {
-    // Start session to check authentication
-    session_start();
+    startSecureSession();
 
     if (!isset($_SESSION['user_id'])) {
         sendResponse(['error' => 'Not authenticated'], 401);
@@ -223,8 +208,8 @@ function getCurrentUser($pdo)
 
     try {
         $stmt = $pdo->prepare("
-            SELECT id, name, email, email_verified, dt_created 
-            FROM users 
+            SELECT id, name, email, email_verified, dt_created
+            FROM users
             WHERE id = ?
         ");
         $stmt->execute([$_SESSION['user_id']]);
@@ -252,6 +237,12 @@ function getCurrentUser($pdo)
     }
 }
 
+
+function getCsrfToken()
+{
+    startSecureSession();
+    sendResponse(['csrf_token' => generateCsrfToken()]);
+}
 
 function createDefaultBoard($pdo, $userId)
 {
@@ -341,8 +332,9 @@ function verifyEmail($pdo)
 
 function resendVerificationEmail($pdo)
 {
-    // Start session to check authentication
-    session_start();
+    checkRateLimit('resend_' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'), 3, 900);
+
+    startSecureSession();
 
     if (!isset($_SESSION['user_id'])) {
         sendResponse(['error' => 'Authentication required'], 401);
@@ -350,8 +342,8 @@ function resendVerificationEmail($pdo)
 
     try {
         $stmt = $pdo->prepare("
-            SELECT id, name, email, email_verified, verification_token 
-            FROM users 
+            SELECT id, name, email, email_verified, verification_token
+            FROM users
             WHERE id = ?
         ");
         $stmt->execute([$_SESSION['user_id']]);
@@ -394,10 +386,7 @@ function resendVerificationEmail($pdo)
 
 function sendVerificationEmail($email, $name, $token)
 {
-    $siteUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") .
-        "://" . $_SERVER['HTTP_HOST'];
-
-    $verificationUrl = $siteUrl . "/api/auth.php?action=verify&token=" . $token;
+    $verificationUrl = APP_ORIGIN . "/api/auth.php?action=verify&token=" . $token;
 
     $subject = "Verify Your SuperSix Account";
 
@@ -434,7 +423,7 @@ function sendVerificationEmail($email, $name, $token)
 
     $headers = "MIME-Version: 1.0" . "\r\n";
     $headers .= "Content-type:text/html;charset=UTF-8" . "\r\n";
-    $headers .= "From: SuperSix <noreply@" . $_SERVER['HTTP_HOST'] . ">" . "\r\n";
+    $headers .= "From: SuperSix <noreply@supersix.app>" . "\r\n";
 
     return mail($email, $subject, $message, $headers);
 }
