@@ -57,6 +57,11 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
+    // App constants
+    const MAX_ACTIVE_TASKS = 6;
+    const DESKTOP_BREAKPOINT = 1250;
+    const ANIMATION_DELAY_MS = 300;
+
     // Lucide React icons (simplified versions)
     const Icon = ({ name, size = 16, className = "", ...props }) => {
       const iconPaths = {
@@ -1013,6 +1018,41 @@
       );
     };
 
+    // Error Boundary - catches React render errors and shows recovery UI
+    class ErrorBoundary extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+      }
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+      componentDidCatch(error, info) {
+        console.error('SuperSix error:', error, info);
+      }
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+              <div className="text-center max-w-md mx-4">
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6">
+                  <h2 className="text-red-400 font-semibold mb-2">Something went wrong</h2>
+                  <p className="text-slate-400 text-sm mb-4">The app encountered an unexpected error.</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded transition-colors"
+                  >
+                    Reload App
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
     const App = () => {
       // Haiku collection
       const haikus = [
@@ -1105,38 +1145,25 @@
 
       // Auto-load subtasks for all tasks when tasks change
       useEffect(() => {
-        console.log('Subtask effect triggered. Tasks length:', tasks.length);
-
         if (tasks.length > 0) {
-          console.log('Processing tasks for subtask loading...');
           tasks.forEach(task => {
-            console.log(`Checking task ${task.id}: has subtasks?`, !!subtasks[task.id], 'loading?', !!loadingSubtasks[task.id]);
-
             if (!subtasks[task.id] && !loadingSubtasks[task.id]) {
-              console.log(`Loading subtasks for task ${task.id}`);
               loadSubtasks(task.id);
             }
           });
-        } else {
-          console.log('No tasks to process for subtasks');
         }
-      }, [tasks, currentBoard, subtasks, loadingSubtasks]); // Add missing dependencies
+      }, [tasks, currentBoard, subtasks, loadingSubtasks]);
 
       // Subtask state
       const [subtasks, setSubtasks] = useState({});
       const [loadingSubtasks, setLoadingSubtasks] = useState({});
 
       const loadSubtasks = async (taskId) => {
-        if (loadingSubtasks[taskId]) {
-          console.log(`Already loading subtasks for task ${taskId}`);
-          return;
-        }
+        if (loadingSubtasks[taskId]) return;
 
         try {
-          console.log(`Starting to load subtasks for task ${taskId}`);
           setLoadingSubtasks(prev => ({ ...prev, [taskId]: true }));
           const subtasksData = await api.getSubtasks(taskId);
-          console.log(`Loaded ${subtasksData.length} subtasks for task ${taskId}:`, subtasksData);
           setSubtasks(prev => ({ ...prev, [taskId]: subtasksData }));
         } catch (err) {
           console.error('Error loading subtasks:', err);
@@ -1230,11 +1257,6 @@
         }
       }, [currentBoard, user]);
 
-      // Add this useEffect to see when tasks state changes
-      useEffect(() => {
-        console.log('Tasks state updated:', tasks.length, tasks);
-      }, [tasks]);
-
       // Handle window resize
       useEffect(() => {
         const handleResize = () => setWindowWidth(window.innerWidth);
@@ -1301,13 +1323,10 @@
       // API functions (unchanged but now require authentication)
       const loadBoards = async () => {
         try {
-          console.log('Loading boards...');
           setLoading(true);
           const boardsData = await api.getBoards();
-          console.log('Boards loaded:', boardsData);
           setBoards(boardsData);
           if (boardsData.length > 0 && !currentBoard) {
-            console.log('Setting current board to:', boardsData[0].id);
             switchBoard(boardsData[0].id);
           }
           setError(null);
@@ -1324,14 +1343,12 @@
 
         try {
           const tasksData = await api.getTasks(currentBoard);
-          console.log('Tasks API response:', tasksData);
           setTasks(tasksData);
 
           // Force subtask loading after a small delay to ensure state updates
           setTimeout(() => {
             tasksData.forEach(task => {
               if (!subtasks[task.id]) {
-                console.log(`Force loading subtasks for task ${task.id} after task load`);
                 loadSubtasks(task.id);
               }
             });
@@ -1387,26 +1404,34 @@
         }
       };
 
-      // Task management functions (unchanged)
-      const completeTask = async (taskId) => {
+      // Action guard to prevent duplicate API calls from rapid clicks
+      const pendingAction = useRef(false);
+      const withGuard = (fn) => async (...args) => {
+        if (pendingAction.current) return;
+        pendingAction.current = true;
+        try { await fn(...args); } finally { pendingAction.current = false; }
+      };
+
+      // Task management functions
+      const completeTask = withGuard(async (taskId) => {
         try {
           await api.completeTask(taskId);
           await loadTasks();
         } catch (err) {
           setError('Failed to complete task: ' + err.message);
         }
-      };
+      });
 
-      const postponeTask = async (taskId) => {
+      const postponeTask = withGuard(async (taskId) => {
         try {
           await api.postponeTask(taskId);
           await loadTasks();
         } catch (err) {
           setError('Failed to postpone task: ' + err.message);
         }
-      };
+      });
 
-      const deleteTask = async (taskId) => {
+      const deleteTask = withGuard(async (taskId) => {
         try {
           await api.deleteTask(taskId);
           await loadTasks();
@@ -1414,11 +1439,11 @@
         } catch (err) {
           setError('Failed to delete task: ' + err.message);
         }
-      };
+      });
 
-      const promoteTask = async (taskId) => {
+      const promoteTask = withGuard(async (taskId) => {
         setMovingTask(taskId);
-        setTimeout(() => setMovingTask(null), 300);
+        setTimeout(() => setMovingTask(null), ANIMATION_DELAY_MS);
 
         try {
           await api.promoteTask(taskId);
@@ -1427,11 +1452,11 @@
           setError('Failed to promote task: ' + err.message);
           setMovingTask(null);
         }
-      };
+      });
 
-      const demoteTask = async (taskId) => {
+      const demoteTask = withGuard(async (taskId) => {
         setMovingTask(taskId);
-        setTimeout(() => setMovingTask(null), 300);
+        setTimeout(() => setMovingTask(null), ANIMATION_DELAY_MS);
 
         try {
           await api.demoteTask(taskId);
@@ -1440,11 +1465,11 @@
           setError('Failed to demote task: ' + err.message);
           setMovingTask(null);
         }
-      };
+      });
 
-      const moveTaskUp = async (taskId) => {
+      const moveTaskUp = withGuard(async (taskId) => {
         setMovingTask(taskId);
-        setTimeout(() => setMovingTask(null), 300);
+        setTimeout(() => setMovingTask(null), ANIMATION_DELAY_MS);
 
         try {
           await api.reorderTask(taskId, 'up');
@@ -1453,11 +1478,11 @@
           setError('Failed to move task: ' + err.message);
           setMovingTask(null);
         }
-      };
+      });
 
-      const moveTaskDown = async (taskId) => {
+      const moveTaskDown = withGuard(async (taskId) => {
         setMovingTask(taskId);
-        setTimeout(() => setMovingTask(null), 300);
+        setTimeout(() => setMovingTask(null), ANIMATION_DELAY_MS);
 
         try {
           await api.reorderTask(taskId, 'down');
@@ -1466,9 +1491,9 @@
           setError('Failed to move task: ' + err.message);
           setMovingTask(null);
         }
-      };
+      });
 
-      const addTask = async () => {
+      const addTask = withGuard(async () => {
         if (!newTask.trim()) return;
 
         try {
@@ -1478,7 +1503,7 @@
         } catch (err) {
           setError('Failed to add task: ' + err.message);
         }
-      };
+      });
 
       const editTask = (taskId) => {
         const task = tasks.find(t => t.id === taskId);
@@ -1493,7 +1518,7 @@
         loadSubtasks(taskId);
       };
 
-      const saveEdit = async () => {
+      const saveEdit = withGuard(async () => {
         try {
           await api.updateTask(
             editingTask.id,
@@ -1506,21 +1531,21 @@
         } catch (err) {
           setError('Failed to update task: ' + err.message);
         }
-      };
+      });
 
-      const undoComplete = async (taskId) => {
+      const undoComplete = withGuard(async (taskId) => {
         try {
           await api.undoCompleteTask(taskId);
           await loadTasks();
         } catch (err) {
           setError('Failed to restore task: ' + err.message);
         }
-      };
+      });
 
       // Helper functions
       const getBoardStats = (boardId) => {
         const activeTasks = tasks.filter(t => t.boardId === boardId && t.status === 'active').length;
-        return `${activeTasks}/6`;
+        return `${activeTasks}/${MAX_ACTIVE_TASKS}`;
       };
 
       const switchBoard = (boardId) => {
@@ -1591,7 +1616,7 @@
       const activeTasks = tasks
         .filter(task => task.status === 'active')
         .sort((a, b) => a.position - b.position)
-        .slice(0, 6);
+        .slice(0, MAX_ACTIVE_TASKS);
 
       const queuedTasks = tasks
         .filter(task => task.status === 'queued')
@@ -1632,10 +1657,10 @@
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex overflow-x-hidden">
 
           {/* Sidebar */}
-          <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 border-r border-slate-700 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ transform: windowWidth >= 1250 ? 'translateX(0)' : undefined, position: windowWidth >= 1250 ? 'static' : 'fixed' }}>
+          <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 border-r border-slate-700 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ transform: windowWidth >= DESKTOP_BREAKPOINT ? 'translateX(0)' : undefined, position: windowWidth >= DESKTOP_BREAKPOINT ? 'static' : 'fixed' }}>
             <div className="flex items-center justify-between h-16 px-4 border-b border-slate-700">
               <h2 className="text-lg font-semibold text-white">Boards</h2>
-              {windowWidth < 1250 && (
+              {windowWidth < DESKTOP_BREAKPOINT && (
                 <button
                   onClick={() => setSidebarOpen(false)}
                   className="text-slate-400 hover:text-white"
@@ -1744,7 +1769,7 @@
           </div>
 
           {/* Sidebar backdrop for mobile */}
-          {sidebarOpen && windowWidth < 1250 && (
+          {sidebarOpen && windowWidth < DESKTOP_BREAKPOINT && (
             <div
               className="fixed inset-0 bg-black bg-opacity-50 z-40"
               onClick={() => setSidebarOpen(false)}
@@ -1754,7 +1779,7 @@
           {/* Main Content */}
           <div className="flex-1">
             {/* Mobile Header */}
-            {windowWidth < 1250 && (
+            {windowWidth < DESKTOP_BREAKPOINT && (
               <div className="flex items-center justify-between p-4 bg-slate-800 border-b border-slate-700">
                 <button
                   onClick={() => setSidebarOpen(true)}
@@ -1772,7 +1797,7 @@
             )}
 
             {/* Desktop Header */}
-            {windowWidth >= 1250 && (
+            {windowWidth >= DESKTOP_BREAKPOINT && (
               <div className="flex items-center justify-between p-6 border-b border-slate-700">
                 <div className="text-center flex-1">
                   <img src="/SuperSix-Logo.png" alt="SuperSix" className="h-12 mx-auto mb-2" />
@@ -1845,7 +1870,7 @@
                     </h2>
 
                     <div className="space-y-3">
-                      {Array.from({ length: 6 }, (_, slotIndex) => {
+                      {Array.from({ length: MAX_ACTIVE_TASKS }, (_, slotIndex) => {
                         const task = activeTasks[slotIndex];
                         const isCurrentFocus = slotIndex === 0;
 
@@ -2220,7 +2245,7 @@
       );
     };
 
-    ReactDOM.render(<App />, document.getElementById('root'));
+    ReactDOM.render(<ErrorBoundary><App /></ErrorBoundary>, document.getElementById('root'));
   </script>
 </body>
 

@@ -127,6 +127,10 @@ function validatePasswordStrength(string $password): ?string {
     return null;
 }
 
+// ── App Constants ─────────────────────────────────────────────────
+
+const MAX_ACTIVE_TASKS = 6;
+
 // ── Input Length Validation ─────────────────────────────────────────
 
 const MAX_LENGTHS = [

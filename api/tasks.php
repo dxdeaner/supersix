@@ -376,7 +376,7 @@ function promoteTask($pdo) {
         $stmt->execute([$task['board_id']]);
         $activeCount = $stmt->fetch()['count'];
         
-        if ($activeCount < 6) {
+        if ($activeCount < MAX_ACTIVE_TASKS) {
             // Simple promotion
             $stmt = $pdo->prepare("
                 UPDATE tasks 
@@ -634,7 +634,7 @@ function undoCompleteTask($pdo) {
         $stmt->execute([$task['board_id']]);
         $activeCount = $stmt->fetch()['count'];
         
-        if ($activeCount < 6) {
+        if ($activeCount < MAX_ACTIVE_TASKS) {
             // Restore to active
             $stmt = $pdo->prepare("
                 UPDATE tasks 
@@ -679,7 +679,7 @@ function promoteQueuedTask($pdo, $boardId) {
     $stmt->execute([$boardId]);
     $activeCount = $stmt->fetch()['count'];
     
-    if ($activeCount < 6) {
+    if ($activeCount < MAX_ACTIVE_TASKS) {
         $stmt = $pdo->prepare("
             SELECT id FROM tasks 
             WHERE board_id = ? AND status = 'queued' 
