@@ -10,6 +10,8 @@ import TaskCard from './components/TaskCard';
 import QueueCard from './components/QueueCard';
 import SubtaskList from './components/SubtaskList';
 import QuickAddModal from './components/QuickAddModal';
+import OfflineIndicator from './components/OfflineIndicator';
+import ReloadPrompt from './components/ReloadPrompt';
 
 const App = () => {
   // Haiku collection
@@ -770,6 +772,9 @@ const App = () => {
           </div>
         )}
 
+        {/* Offline Indicator */}
+        <OfflineIndicator />
+
         {/* Email Verification Banner */}
         {showEmailBanner && (
           <EmailVerificationBanner user={user} />
@@ -1172,6 +1177,9 @@ const App = () => {
       )}
 
       {/* Delete Confirmation Modal */}
+      {/* SW Update Prompt */}
+      <ReloadPrompt />
+
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-lg p-6 max-w-sm mx-4 border border-slate-700">
