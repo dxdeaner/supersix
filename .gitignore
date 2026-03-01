@@ -26,6 +26,10 @@ api/api_test.php
 .DS_Store
 Thumbs.db
 
+# Node.js
+node_modules/
+dist/
+
 # Temporary files
 temp/
 tmp/
