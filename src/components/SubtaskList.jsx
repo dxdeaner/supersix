@@ -19,7 +19,7 @@ const SubtaskList = ({ taskId, subtasks, onAdd, onToggle, onDelete, loading }) =
           Checklist ({completedCount}/{taskSubtasks.length})
         </h4>
         {taskSubtasks.length > 0 && (
-          <div className="w-24 bg-slate-600 rounded-full h-2">
+          <div className="w-24 bg-slate-600 rounded-full h-2" role="progressbar" aria-valuenow={completedCount} aria-valuemin={0} aria-valuemax={taskSubtasks.length} aria-label="Checklist progress">
             <div
               className="bg-green-500 h-2 rounded-full transition-all duration-300"
               style={{ width: `${taskSubtasks.length > 0 ? (completedCount / taskSubtasks.length) * 100 : 0}%` }}
@@ -28,14 +28,17 @@ const SubtaskList = ({ taskId, subtasks, onAdd, onToggle, onDelete, loading }) =
         )}
       </div>
 
-      <div className="space-y-2 max-h-40 overflow-y-auto">
+      <ul className="space-y-2 max-h-40 overflow-y-auto">
         {taskSubtasks.map(subtask => (
-          <div
+          <li
             key={subtask.id}
             className="flex items-center space-x-2 group"
           >
             <button
               onClick={() => onToggle(subtask.id, taskId)}
+              role="checkbox"
+              aria-checked={subtask.completed}
+              aria-label={subtask.title}
               className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${subtask.completed
                 ? 'bg-green-500 border-green-500 text-white'
                 : 'border-slate-500 hover:border-green-400'
@@ -54,12 +57,13 @@ const SubtaskList = ({ taskId, subtasks, onAdd, onToggle, onDelete, loading }) =
             <button
               onClick={() => onDelete(subtask.id, taskId)}
               className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 p-1 transition-all"
+              aria-label="Delete checklist item"
             >
               <Icon name="x" size={12} />
             </button>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
 
       <div className="flex space-x-2">
         <input
@@ -68,6 +72,7 @@ const SubtaskList = ({ taskId, subtasks, onAdd, onToggle, onDelete, loading }) =
           onChange={(e) => setNewSubtask(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleAdd()}
           placeholder="Add checklist item..."
+          aria-label="New checklist item"
           className="flex-1 bg-slate-600 border border-slate-500 rounded px-2 py-1 text-white text-sm placeholder-slate-400 focus:outline-none focus:border-cyan-400"
         />
         <button

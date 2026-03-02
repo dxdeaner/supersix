@@ -10,7 +10,7 @@ const QueueCard = ({ task, index, onEdit, onDelete, onMoveUp, onMoveDown, onProm
             {task.dueDate && (
               <div className="flex items-center space-x-1">
                 {new Date(task.dueDate) < new Date() && (
-                  <span className="text-red-400 font-bold text-sm">!</span>
+                  <span className="text-red-400 font-bold text-sm" aria-label="Overdue" role="img">!</span>
                 )}
                 <div className={`${new Date(task.dueDate) < new Date() ? 'bg-red-500' : 'bg-orange-500'} text-white px-2 py-1 rounded-full text-xs font-medium`}>
                   {new Date(task.dueDate).toLocaleString()}
@@ -39,6 +39,7 @@ const QueueCard = ({ task, index, onEdit, onDelete, onMoveUp, onMoveDown, onProm
               disabled={!canMoveUp}
               className={`p-1 rounded transition-all ${canMoveUp ? 'text-slate-400 hover:text-cyan-400 hover:bg-cyan-400/10 cursor-pointer' : 'text-slate-600 cursor-not-allowed'}`}
               title="Move up in queue"
+              aria-label="Move task up in queue"
             >
               <Icon name="chevron-up" size={12} />
             </button>
@@ -47,6 +48,7 @@ const QueueCard = ({ task, index, onEdit, onDelete, onMoveUp, onMoveDown, onProm
               disabled={!canMoveDown}
               className={`p-1 rounded transition-all ${canMoveDown ? 'text-slate-400 hover:text-cyan-400 hover:bg-cyan-400/10 cursor-pointer' : 'text-slate-600 cursor-not-allowed'}`}
               title="Move down in queue"
+              aria-label="Move task down in queue"
             >
               <Icon name="chevron-down" size={12} />
             </button>
@@ -56,6 +58,7 @@ const QueueCard = ({ task, index, onEdit, onDelete, onMoveUp, onMoveDown, onProm
             onClick={() => onEdit(task.id)}
             className="text-slate-400 hover:text-slate-300 p-1 transition-colors hover:bg-slate-600/50 rounded"
             title="Edit task"
+            aria-label="Edit task"
           >
             <Icon name="edit-3" size={14} />
           </button>
@@ -63,6 +66,7 @@ const QueueCard = ({ task, index, onEdit, onDelete, onMoveUp, onMoveDown, onProm
             onClick={() => onDelete(task.id)}
             className="text-red-400 hover:text-red-300 p-1 transition-colors hover:bg-red-400/10 rounded"
             title="Delete task"
+            aria-label="Delete task"
           >
             <Icon name="trash-2" size={14} />
           </button>

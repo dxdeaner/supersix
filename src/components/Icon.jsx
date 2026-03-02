@@ -30,6 +30,8 @@ const Icon = ({ name, size = 16, className = '', ...props }) => (
     strokeWidth={2}
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
+    focusable="false"
     className={className}
     {...props}
   >

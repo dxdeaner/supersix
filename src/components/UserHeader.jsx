@@ -15,6 +15,12 @@ const UserHeader = ({ user, onLogout, onOpenAuth }) => {
     }
   };
 
+  const handleDropdownKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setDropdownOpen(false);
+    }
+  };
+
   if (!user) {
     return (
       <div className="flex items-center space-x-2">
@@ -33,6 +39,9 @@ const UserHeader = ({ user, onLogout, onOpenAuth }) => {
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
         className="flex items-center space-x-2 text-slate-300 hover:text-white transition-colors"
+        aria-label="User menu"
+        aria-expanded={dropdownOpen}
+        aria-haspopup="true"
       >
         <div className="w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center">
           <Icon name="user" size={16} />
@@ -41,7 +50,11 @@ const UserHeader = ({ user, onLogout, onOpenAuth }) => {
       </button>
 
       {dropdownOpen && (
-        <div className="absolute right-0 top-full mt-2 bg-slate-700 border border-slate-600 rounded-lg shadow-xl min-w-48 z-50">
+        <div
+          className="absolute right-0 top-full mt-2 bg-slate-700 border border-slate-600 rounded-lg shadow-xl min-w-48 z-50"
+          role="menu"
+          onKeyDown={handleDropdownKeyDown}
+        >
           <div className="p-3 border-b border-slate-600">
             <p className="text-white font-medium">{user.name}</p>
             <p className="text-slate-400 text-sm">{user.email}</p>
@@ -52,6 +65,7 @@ const UserHeader = ({ user, onLogout, onOpenAuth }) => {
           <button
             onClick={handleLogout}
             className="w-full px-3 py-2 text-left text-slate-300 hover:bg-slate-600 hover:text-white flex items-center space-x-2 rounded-b-lg"
+            role="menuitem"
           >
             <Icon name="log-out" size={14} />
             <span>Sign Out</span>
@@ -63,6 +77,7 @@ const UserHeader = ({ user, onLogout, onOpenAuth }) => {
       {dropdownOpen && (
         <div
           className="fixed inset-0 z-40"
+          aria-hidden="true"
           onClick={() => setDropdownOpen(false)}
         />
       )}

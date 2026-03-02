@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { MAX_ACTIVE_TASKS, DESKTOP_BREAKPOINT, ANIMATION_DELAY_MS } from './constants';
 import api from './services/api';
 import Icon from './components/Icon';
@@ -12,6 +12,7 @@ import SubtaskList from './components/SubtaskList';
 import QuickAddModal from './components/QuickAddModal';
 import OfflineIndicator from './components/OfflineIndicator';
 import ReloadPrompt from './components/ReloadPrompt';
+import useFocusTrap from './hooks/useFocusTrap';
 
 const App = () => {
   // Haiku collection
@@ -144,10 +145,20 @@ const App = () => {
   };
 
   const toggleSubtask = async (subtaskId, taskId) => {
+    // Phase 4: Optimistic subtask toggle (no withGuard — allow rapid-fire)
+    const prevSubtasks = { ...subtasks };
+    setSubtasks(prev => ({
+      ...prev,
+      [taskId]: (prev[taskId] || []).map(s =>
+        s.id === subtaskId ? { ...s, completed: !s.completed } : s
+      )
+    }));
+
     try {
       await api.toggleSubtask(subtaskId);
-      await loadSubtasks(taskId);
+      scheduleReconcileSubtasks(taskId);
     } catch (err) {
+      setSubtasks(prevSubtasks);
       setError('Failed to update subtask: ' + err.message);
     }
   };
@@ -182,6 +193,51 @@ const App = () => {
   const [boardMenuOpen, setBoardMenuOpen] = useState(null);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Modal refs for focus traps (Phase 3)
+  const createBoardRef = useRef(null);
+  const editBoardRef = useRef(null);
+  const editTaskRef = useRef(null);
+  const deleteConfirmRef = useRef(null);
+
+  // Focus traps for inline modals (Phase 3)
+  useFocusTrap(createBoardRef, showBoardModal, () => {
+    setShowBoardModal(false);
+    setNewBoardName('');
+  });
+  useFocusTrap(editBoardRef, !!editingBoard, () => setEditingBoard(null));
+  useFocusTrap(editTaskRef, !!editingTask, () => setEditingTask(null));
+  useFocusTrap(deleteConfirmRef, !!deleteConfirm, () => setDeleteConfirm(null));
+
+  // Error toast auto-dismiss (Phase 3: fix transient error bug)
+  useEffect(() => {
+    if (error && boards.length > 0) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, boards.length]);
+
+  // Phase 4: Background reconciliation
+  const reconcileRef = useRef(null);
+  const reconcileSubtasksRef = useRef(null);
+
+  const scheduleReconcile = useCallback(() => {
+    if (reconcileRef.current) clearTimeout(reconcileRef.current);
+    reconcileRef.current = setTimeout(() => loadTasks(), 2000);
+  }, [currentBoard]);
+
+  const scheduleReconcileSubtasks = useCallback((taskId) => {
+    if (reconcileSubtasksRef.current) clearTimeout(reconcileSubtasksRef.current);
+    reconcileSubtasksRef.current = setTimeout(() => loadSubtasks(taskId), 2000);
+  }, []);
+
+  // Clean up reconciliation timers on unmount
+  useEffect(() => {
+    return () => {
+      if (reconcileRef.current) clearTimeout(reconcileRef.current);
+      if (reconcileSubtasksRef.current) clearTimeout(reconcileSubtasksRef.current);
+    };
+  }, []);
 
   // Check authentication on app load
   useEffect(() => {
@@ -369,98 +425,158 @@ const App = () => {
     try { await fn(...args); } finally { pendingAction.current = false; }
   };
 
-  // Task management functions
-  const completeTask = withGuard(async (taskId) => {
-    try {
-      await api.completeTask(taskId);
-      await loadTasks();
-    } catch (err) {
-      setError('Failed to complete task: ' + err.message);
-    }
-  });
+  // Phase 4: withOptimistic helper — composes with withGuard
+  const withOptimistic = (apiFn, optimisticUpdate, getSnapshot) =>
+    withGuard(async (...args) => {
+      const snapshot = getSnapshot();
+      optimisticUpdate(...args);
+      try {
+        await apiFn(...args);
+        scheduleReconcile();
+      } catch (err) {
+        snapshot.forEach(([setter, value]) => setter(value));
+        setError('Failed: ' + err.message);
+      }
+    });
 
-  const postponeTask = withGuard(async (taskId) => {
-    try {
-      await api.postponeTask(taskId);
-      await loadTasks();
-    } catch (err) {
-      setError('Failed to postpone task: ' + err.message);
-    }
-  });
+  // Task management functions — Phase 4: optimistic updates
+  const completeTask = withOptimistic(
+    (taskId) => api.completeTask(taskId),
+    (taskId) => {
+      setTasks(prev => prev.map(t =>
+        t.id === taskId
+          ? { ...t, status: 'completed', completedAt: new Date().toISOString() }
+          : t
+      ));
+    },
+    () => [[setTasks, [...tasks]]]
+  );
 
-  const deleteTask = withGuard(async (taskId) => {
-    try {
-      await api.deleteTask(taskId);
-      await loadTasks();
+  const postponeTask = withOptimistic(
+    (taskId) => api.postponeTask(taskId),
+    (taskId) => {
+      const maxQueuePos = Math.max(0, ...tasks.filter(t => t.status === 'queued').map(t => t.position));
+      setTasks(prev => prev.map(t =>
+        t.id === taskId
+          ? { ...t, status: 'queued', position: maxQueuePos + 1 }
+          : t
+      ));
+    },
+    () => [[setTasks, [...tasks]]]
+  );
+
+  const deleteTask = withOptimistic(
+    (taskId) => api.deleteTask(taskId),
+    (taskId) => {
+      setTasks(prev => prev.filter(t => t.id !== taskId));
       setDeleteConfirm(null);
-    } catch (err) {
-      setError('Failed to delete task: ' + err.message);
-    }
-  });
+    },
+    () => [[setTasks, [...tasks]], [setDeleteConfirm, deleteConfirm]]
+  );
 
-  const promoteTask = withGuard(async (taskId) => {
-    setMovingTask(taskId);
-    setTimeout(() => setMovingTask(null), ANIMATION_DELAY_MS);
+  const promoteTask = withOptimistic(
+    (taskId) => api.promoteTask(taskId),
+    (taskId) => {
+      setMovingTask(taskId);
+      setTimeout(() => setMovingTask(null), ANIMATION_DELAY_MS);
+      const maxActivePos = Math.max(0, ...tasks.filter(t => t.status === 'active').map(t => t.position));
+      setTasks(prev => prev.map(t =>
+        t.id === taskId
+          ? { ...t, status: 'active', position: maxActivePos + 1 }
+          : t
+      ));
+    },
+    () => [[setTasks, [...tasks]]]
+  );
 
-    try {
-      await api.promoteTask(taskId);
-      await loadTasks();
-    } catch (err) {
-      setError('Failed to promote task: ' + err.message);
-      setMovingTask(null);
-    }
-  });
+  const demoteTask = withOptimistic(
+    (taskId) => api.demoteTask(taskId),
+    (taskId) => {
+      setMovingTask(taskId);
+      setTimeout(() => setMovingTask(null), ANIMATION_DELAY_MS);
+      const maxQueuePos = Math.max(0, ...tasks.filter(t => t.status === 'queued').map(t => t.position));
+      setTasks(prev => prev.map(t =>
+        t.id === taskId
+          ? { ...t, status: 'queued', position: maxQueuePos + 1 }
+          : t
+      ));
+    },
+    () => [[setTasks, [...tasks]]]
+  );
 
-  const demoteTask = withGuard(async (taskId) => {
-    setMovingTask(taskId);
-    setTimeout(() => setMovingTask(null), ANIMATION_DELAY_MS);
+  const moveTaskUp = withOptimistic(
+    (taskId) => api.reorderTask(taskId, 'up'),
+    (taskId) => {
+      setMovingTask(taskId);
+      setTimeout(() => setMovingTask(null), ANIMATION_DELAY_MS);
+      setTasks(prev => {
+        const task = prev.find(t => t.id === taskId);
+        if (!task) return prev;
+        const sameStatus = prev
+          .filter(t => t.status === task.status)
+          .sort((a, b) => a.position - b.position);
+        const idx = sameStatus.findIndex(t => t.id === taskId);
+        if (idx <= 0) return prev;
+        const neighbor = sameStatus[idx - 1];
+        return prev.map(t => {
+          if (t.id === taskId) return { ...t, position: neighbor.position };
+          if (t.id === neighbor.id) return { ...t, position: task.position };
+          return t;
+        });
+      });
+    },
+    () => [[setTasks, [...tasks]]]
+  );
 
-    try {
-      await api.demoteTask(taskId);
-      await loadTasks();
-    } catch (err) {
-      setError('Failed to demote task: ' + err.message);
-      setMovingTask(null);
-    }
-  });
+  const moveTaskDown = withOptimistic(
+    (taskId) => api.reorderTask(taskId, 'down'),
+    (taskId) => {
+      setMovingTask(taskId);
+      setTimeout(() => setMovingTask(null), ANIMATION_DELAY_MS);
+      setTasks(prev => {
+        const task = prev.find(t => t.id === taskId);
+        if (!task) return prev;
+        const sameStatus = prev
+          .filter(t => t.status === task.status)
+          .sort((a, b) => a.position - b.position);
+        const idx = sameStatus.findIndex(t => t.id === taskId);
+        if (idx >= sameStatus.length - 1) return prev;
+        const neighbor = sameStatus[idx + 1];
+        return prev.map(t => {
+          if (t.id === taskId) return { ...t, position: neighbor.position };
+          if (t.id === neighbor.id) return { ...t, position: task.position };
+          return t;
+        });
+      });
+    },
+    () => [[setTasks, [...tasks]]]
+  );
 
-  const moveTaskUp = withGuard(async (taskId) => {
-    setMovingTask(taskId);
-    setTimeout(() => setMovingTask(null), ANIMATION_DELAY_MS);
-
-    try {
-      await api.reorderTask(taskId, 'up');
-      await loadTasks();
-    } catch (err) {
-      setError('Failed to move task: ' + err.message);
-      setMovingTask(null);
-    }
-  });
-
-  const moveTaskDown = withGuard(async (taskId) => {
-    setMovingTask(taskId);
-    setTimeout(() => setMovingTask(null), ANIMATION_DELAY_MS);
-
-    try {
-      await api.reorderTask(taskId, 'down');
-      await loadTasks();
-    } catch (err) {
-      setError('Failed to move task: ' + err.message);
-      setMovingTask(null);
-    }
-  });
-
-  const addTask = withGuard(async () => {
-    if (!newTask.trim()) return;
-
-    try {
-      await api.createTask(currentBoard, newTask.trim());
-      await loadTasks();
+  const addTask = withOptimistic(
+    async () => {
+      const trimmed = newTask.trim();
+      if (!trimmed) return;
+      await api.createTask(currentBoard, trimmed);
+    },
+    () => {
+      const trimmed = newTask.trim();
+      if (!trimmed) return;
+      const maxQueuePos = Math.max(0, ...tasks.filter(t => t.status === 'queued').map(t => t.position));
+      const tempTask = {
+        id: 'temp-' + Date.now(),
+        title: trimmed,
+        status: 'queued',
+        position: maxQueuePos + 1,
+        boardId: currentBoard,
+        description: '',
+        dueDate: null,
+        completedAt: null,
+      };
+      setTasks(prev => [...prev, tempTask]);
       setNewTask('');
-    } catch (err) {
-      setError('Failed to add task: ' + err.message);
-    }
-  });
+    },
+    () => [[setTasks, [...tasks]], [setNewTask, newTask]]
+  );
 
   const editTask = (taskId) => {
     const task = tasks.find(t => t.id === taskId);
@@ -475,29 +591,38 @@ const App = () => {
     loadSubtasks(taskId);
   };
 
-  const saveEdit = withGuard(async () => {
-    try {
+  const saveEdit = withOptimistic(
+    async () => {
       await api.updateTask(
         editingTask.id,
         editingTask.title,
         editingTask.description,
         editingTask.dueDate || null
       );
-      await loadTasks();
+    },
+    () => {
+      setTasks(prev => prev.map(t =>
+        t.id === editingTask.id
+          ? { ...t, title: editingTask.title, description: editingTask.description, dueDate: editingTask.dueDate || null }
+          : t
+      ));
       setEditingTask(null);
-    } catch (err) {
-      setError('Failed to update task: ' + err.message);
-    }
-  });
+    },
+    () => [[setTasks, [...tasks]], [setEditingTask, editingTask]]
+  );
 
-  const undoComplete = withGuard(async (taskId) => {
-    try {
-      await api.undoCompleteTask(taskId);
-      await loadTasks();
-    } catch (err) {
-      setError('Failed to restore task: ' + err.message);
-    }
-  });
+  const undoComplete = withOptimistic(
+    (taskId) => api.undoCompleteTask(taskId),
+    (taskId) => {
+      const maxQueuePos = Math.max(0, ...tasks.filter(t => t.status === 'queued').map(t => t.position));
+      setTasks(prev => prev.map(t =>
+        t.id === taskId
+          ? { ...t, status: 'queued', completedAt: null, position: maxQueuePos + 1 }
+          : t
+      ));
+    },
+    () => [[setTasks, [...tasks]]]
+  );
 
   // Helper functions
   const getBoardStats = (boardId) => {
@@ -509,6 +634,26 @@ const App = () => {
     if (boardId !== currentBoard) {
       setSubtasks({});
       setCurrentBoard(boardId);
+    }
+  };
+
+  // ARIA tabs: arrow key navigation (Phase 3)
+  const handleTabKeyDown = (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      const next = activeTab === 'active' ? 'completed' : 'active';
+      setActiveTab(next);
+      // Focus the newly active tab
+      const tabId = next === 'active' ? 'tab-active' : 'tab-completed';
+      document.getElementById(tabId)?.focus();
+    }
+  };
+
+  // Board menu keyboard handler (Phase 3)
+  const handleBoardMenuKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      setBoardMenuOpen(null);
     }
   };
 
@@ -614,13 +759,18 @@ const App = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex overflow-x-hidden">
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 border-r border-slate-700 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ transform: windowWidth >= DESKTOP_BREAKPOINT ? 'translateX(0)' : undefined, position: windowWidth >= DESKTOP_BREAKPOINT ? 'static' : 'fixed' }}>
+      <nav
+        aria-label="Boards"
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 border-r border-slate-700 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{ transform: windowWidth >= DESKTOP_BREAKPOINT ? 'translateX(0)' : undefined, position: windowWidth >= DESKTOP_BREAKPOINT ? 'static' : 'fixed' }}
+      >
         <div className="flex items-center justify-between h-16 px-4 border-b border-slate-700">
           <h2 className="text-lg font-semibold text-white">Boards</h2>
           {windowWidth < DESKTOP_BREAKPOINT && (
             <button
               onClick={() => setSidebarOpen(false)}
               className="text-slate-400 hover:text-white"
+              aria-label="Close sidebar"
             >
               <Icon name="x" size={20} />
             </button>
@@ -658,7 +808,9 @@ const App = () => {
                         ? 'hover:bg-cyan-500 text-white'
                         : 'hover:bg-slate-600 text-slate-400'
                         } ${boardMenuOpen === board.id ? 'bg-slate-600' : ''}`}
-                      title="Board options"
+                      aria-label="Board options"
+                      aria-expanded={boardMenuOpen === board.id}
+                      aria-haspopup="true"
                     >
                       <Icon name="more-vertical" size={14} />
                     </button>
@@ -670,6 +822,8 @@ const App = () => {
                   <div
                     className="board-menu-dropdown absolute right-3 top-full mt-1 bg-slate-700 border border-slate-600 rounded-lg shadow-xl w-36"
                     style={{ position: 'absolute', zIndex: 9999 }}
+                    role="menu"
+                    onKeyDown={handleBoardMenuKeyDown}
                   >
                     <button
                       onClick={() => {
@@ -677,6 +831,7 @@ const App = () => {
                         setBoardMenuOpen(null);
                       }}
                       className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-600 hover:text-white flex items-center space-x-2 rounded-t-lg"
+                      role="menuitem"
                     >
                       <Icon name="edit" size={14} />
                       <span>Rename</span>
@@ -684,6 +839,7 @@ const App = () => {
                     <button
                       onClick={() => archiveBoard(board.id)}
                       className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-600 hover:text-white flex items-center space-x-2 rounded-b-lg"
+                      role="menuitem"
                     >
                       <Icon name="archive" size={14} />
                       <span>Archive</span>
@@ -723,24 +879,29 @@ const App = () => {
             </div>
           )}
         </div>
-      </div>
+      </nav>
 
       {/* Sidebar backdrop for mobile */}
       {sidebarOpen && windowWidth < DESKTOP_BREAKPOINT && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* Main Content */}
       <div className="flex-1">
+        {/* Visually-hidden h1 for screen readers (Phase 3) */}
+        <h1 className="sr-only">SuperSix Task Manager</h1>
+
         {/* Mobile Header */}
         {windowWidth < DESKTOP_BREAKPOINT && (
           <div className="flex items-center justify-between p-4 bg-slate-800 border-b border-slate-700">
             <button
               onClick={() => setSidebarOpen(true)}
               className="text-slate-400 hover:text-white"
+              aria-label="Open sidebar menu"
             >
               <Icon name="menu" size={24} />
             </button>
@@ -775,6 +936,23 @@ const App = () => {
         {/* Offline Indicator */}
         <OfflineIndicator />
 
+        {/* Error Toast (Phase 3: fix transient error bug — errors now visible) */}
+        {error && boards.length > 0 && (
+          <div
+            role="alert"
+            className="mx-4 mt-2 bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-lg flex items-center justify-between"
+          >
+            <span className="text-sm">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-400 hover:text-red-200 ml-4 flex-shrink-0"
+              aria-label="Dismiss error"
+            >
+              <Icon name="x" size={16} />
+            </button>
+          </div>
+        )}
+
         {/* Email Verification Banner */}
         {showEmailBanner && (
           <EmailVerificationBanner user={user} />
@@ -793,25 +971,37 @@ const App = () => {
             </div>
           )}
 
-          {/* Tab Navigation with Add Button */}
+          {/* Tab Navigation with Add Button (Phase 3: ARIA tabs) */}
           <div className={`mb-6 ${windowWidth >= 768 ? 'relative flex justify-center' : 'flex justify-center items-center space-x-4'}`}>
             <button
               onClick={() => setShowQuickAddModal(true)}
               className={`w-10 h-10 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center transition-all hover:shadow-lg shadow-orange-500/20 ${windowWidth >= 768 ? 'absolute left-0 top-1/2 transform -translate-y-1/2' : ''}`}
-              title="Add new task"
+              aria-label="Add new task"
             >
               <Icon name="plus" size={20} />
             </button>
 
-            <div className="bg-slate-800 rounded-lg p-1">
+            <div className="bg-slate-800 rounded-lg p-1" role="tablist" aria-label="Task views">
               <button
+                id="tab-active"
+                role="tab"
+                aria-selected={activeTab === 'active'}
+                aria-controls="tabpanel-active"
+                tabIndex={activeTab === 'active' ? 0 : -1}
                 onClick={() => setActiveTab('active')}
+                onKeyDown={handleTabKeyDown}
                 className={`px-6 py-2 rounded-md transition-all ${activeTab === 'active' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
               >
                 Active & Queue
               </button>
               <button
+                id="tab-completed"
+                role="tab"
+                aria-selected={activeTab === 'completed'}
+                aria-controls="tabpanel-completed"
+                tabIndex={activeTab === 'completed' ? 0 : -1}
                 onClick={() => setActiveTab('completed')}
+                onKeyDown={handleTabKeyDown}
                 className={`px-6 py-2 rounded-md transition-all ${activeTab === 'completed' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
               >
                 Completed
@@ -821,11 +1011,16 @@ const App = () => {
 
           {/* Content */}
           {activeTab === 'active' ? (
-            <div className="space-y-8">
+            <div
+              id="tabpanel-active"
+              role="tabpanel"
+              aria-labelledby="tab-active"
+              className="space-y-8"
+            >
               {/* Active Focus Section */}
               <div>
                 <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-                  <span className="w-2 h-2 bg-cyan-400 rounded-full mr-3"></span>
+                  <span className="w-2 h-2 bg-cyan-400 rounded-full mr-3" aria-hidden="true"></span>
                   Active Focus (1-6)
                 </h2>
 
@@ -878,7 +1073,7 @@ const App = () => {
               <div>
                 <div className="border-t border-slate-700 pt-8">
                   <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
-                    <span className="w-2 h-2 bg-orange-400 rounded-full mr-3"></span>
+                    <span className="w-2 h-2 bg-orange-400 rounded-full mr-3" aria-hidden="true"></span>
                     Task Queue ({queuedTasks.length})
                   </h2>
 
@@ -916,6 +1111,7 @@ const App = () => {
                         onChange={(e) => setNewTask(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && addTask()}
                         placeholder="Add new task to queue..."
+                        aria-label="New task title"
                         className="flex-1 bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
                       />
                       <button
@@ -932,7 +1128,11 @@ const App = () => {
             </div>
           ) : (
             /* Completed Tasks */
-            <div>
+            <div
+              id="tabpanel-completed"
+              role="tabpanel"
+              aria-labelledby="tab-completed"
+            >
               <h2 className="text-xl font-semibold text-white mb-4">Completed Tasks</h2>
               {completedTasks.length > 0 ? (
                 <div className="space-y-2">
@@ -948,6 +1148,7 @@ const App = () => {
                         <button
                           onClick={() => undoComplete(task.id)}
                           className="text-yellow-400 hover:text-yellow-300 text-sm"
+                          aria-label={`Undo completion of ${task.title}`}
                         >
                           Undo
                         </button>
@@ -991,8 +1192,14 @@ const App = () => {
       {/* Create Board Modal */}
       {showBoardModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 max-w-md mx-4 border border-slate-700 w-full">
-            <h3 className="text-white font-semibold mb-4">Create New Board</h3>
+          <div
+            ref={createBoardRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-board-title"
+            className="bg-slate-800 rounded-lg p-6 max-w-md mx-4 border border-slate-700 w-full"
+          >
+            <h3 id="create-board-title" className="text-white font-semibold mb-4">Create New Board</h3>
 
             <div className="space-y-4">
               <div>
@@ -1004,7 +1211,6 @@ const App = () => {
                   onKeyPress={(e) => e.key === 'Enter' && createBoard()}
                   placeholder="e.g., Side Projects, Health Goals..."
                   className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
-                  autoFocus
                 />
               </div>
             </div>
@@ -1034,8 +1240,14 @@ const App = () => {
       {/* Edit Board Modal */}
       {editingBoard && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 max-w-md mx-4 border border-slate-700 w-full">
-            <h3 className="text-white font-semibold mb-4">Rename Board</h3>
+          <div
+            ref={editBoardRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-board-title"
+            className="bg-slate-800 rounded-lg p-6 max-w-md mx-4 border border-slate-700 w-full"
+          >
+            <h3 id="edit-board-title" className="text-white font-semibold mb-4">Rename Board</h3>
 
             <div className="space-y-4">
               <div>
@@ -1046,7 +1258,6 @@ const App = () => {
                   onChange={(e) => setEditingBoard({ ...editingBoard, name: e.target.value })}
                   onKeyPress={(e) => e.key === 'Enter' && editBoard(editingBoard.id, editingBoard.name)}
                   className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
-                  autoFocus
                 />
               </div>
             </div>
@@ -1073,8 +1284,14 @@ const App = () => {
       {/* Edit Task Modal */}
       {editingTask && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 max-w-md mx-4 border border-slate-700 w-full">
-            <h3 className="text-white font-semibold mb-4">Edit Task</h3>
+          <div
+            ref={editTaskRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-task-title"
+            className="bg-slate-800 rounded-lg p-6 max-w-md mx-4 border border-slate-700 w-full"
+          >
+            <h3 id="edit-task-title" className="text-white font-semibold mb-4">Edit Task</h3>
 
             <div className="space-y-4">
               <div>
@@ -1085,7 +1302,6 @@ const App = () => {
                   onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
                   onKeyPress={(e) => e.key === 'Enter' && saveEdit()}
                   className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
-                  autoFocus
                 />
               </div>
 
@@ -1114,7 +1330,7 @@ const App = () => {
                       });
                     }}
                     className="bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
-                    placeholder="Date"
+                    aria-label="Due date"
                   />
                   <select
                     value={editingTask.dueDate ? editingTask.dueDate.split('T')[1]?.substring(0, 5) || '09:00' : '09:00'}
@@ -1126,6 +1342,7 @@ const App = () => {
                       });
                     }}
                     className="bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
+                    aria-label="Due time"
                   >
                     {Array.from({ length: 48 }, (_, i) => {
                       const hour = Math.floor(i / 2);
@@ -1182,8 +1399,14 @@ const App = () => {
 
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 max-w-sm mx-4 border border-slate-700">
-            <h3 className="text-white font-semibold mb-2">Delete Task</h3>
+          <div
+            ref={deleteConfirmRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-confirm-title"
+            className="bg-slate-800 rounded-lg p-6 max-w-sm mx-4 border border-slate-700"
+          >
+            <h3 id="delete-confirm-title" className="text-white font-semibold mb-2">Delete Task</h3>
             <p className="text-slate-300 mb-4">
               Are you sure you want to delete this task permanently? This action cannot be undone.
             </p>

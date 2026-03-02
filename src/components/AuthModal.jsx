@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Icon from './Icon';
 import api from '../services/api';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const AuthModal = ({ isOpen, onClose, onAuthSuccess, mode = 'login' }) => {
   const [isLogin, setIsLogin] = useState(mode === 'login');
@@ -13,6 +14,9 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess, mode = 'login' }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const dialogRef = useRef(null);
+
+  useFocusTrap(dialogRef, isOpen, onClose);
 
   // Update mode when prop changes
   useEffect(() => {
@@ -63,14 +67,21 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess, mode = 'login' }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-slate-700">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+        className="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-slate-700"
+      >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-white">
+          <h2 id="auth-modal-title" className="text-xl font-semibold text-white">
             {isLogin ? 'Sign In' : 'Create Account'}
           </h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-white"
+            aria-label="Close dialog"
           >
             <Icon name="x" size={20} />
           </button>
@@ -124,6 +135,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess, mode = 'login' }) => {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 <Icon name={showPassword ? "eye-off" : "eye"} size={16} />
               </button>
@@ -144,7 +156,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess, mode = 'login' }) => {
           </div>
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
+            <div role="alert" className="bg-red-500/10 border border-red-500/20 rounded px-3 py-2">
               <p className="text-red-400 text-sm">{error}</p>
             </div>
           )}

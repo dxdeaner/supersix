@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Icon from './Icon';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const QuickAddModal = ({ isOpen, onClose, onAdd, loading }) => {
   const [newTask, setNewTask] = useState('');
+  const dialogRef = useRef(null);
+
+  useFocusTrap(dialogRef, isOpen, onClose);
 
   const handleAdd = () => {
     if (newTask.trim()) {
@@ -22,12 +26,19 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-slate-700">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="quick-add-title"
+        className="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-slate-700"
+      >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-white">Add Task To Queue</h2>
+          <h2 id="quick-add-title" className="text-xl font-semibold text-white">Add Task To Queue</h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-white"
+            aria-label="Close dialog"
           >
             <Icon name="x" size={20} />
           </button>
@@ -45,7 +56,6 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading }) => {
               onKeyPress={handleKeyPress}
               className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
               placeholder="What needs to get done?"
-              autoFocus
             />
           </div>
         </div>
