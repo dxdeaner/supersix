@@ -1,12 +1,37 @@
+import { useState } from 'react';
 import Icon from './Icon';
 
-const QueueCard = ({ task, index, onEdit, onDelete, onMoveUp, onMoveDown, onPromote, canMoveUp, canMoveDown, isMoving, subtasks }) => {
+const QueueCard = ({ task, index, onEdit, onDelete, onMoveUp, onMoveDown, onPromote, canMoveUp, canMoveDown, isMoving, subtasks, onDragStart, onDragEnd }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const handleDragStart = (e) => {
+    e.dataTransfer.setData('text/plain', '');
+    e.dataTransfer.setData('source', 'queue');
+    e.dataTransfer.effectAllowed = 'move';
+    if (onDragStart) onDragStart(task.id, index, 'queue');
+  };
+
   return (
-    <div className={`bg-slate-800/50 rounded-lg p-3 border border-slate-700 transition-all duration-300 ease-in-out ${isMoving ? 'transform scale-105 shadow-lg shadow-cyan-400/20' : 'hover:border-slate-600'}`}>
+    <div
+      className={`bg-slate-800/50 rounded-lg p-3 border border-slate-700 transition-all duration-300 ease-in-out ${isMoving ? 'transform scale-105 shadow-lg shadow-cyan-400/20' : 'hover:border-slate-600'} ${onDragStart ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      draggable={!!onDragStart}
+      onDragStart={handleDragStart}
+      onDragEnd={onDragEnd}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1 mr-4">
           <div className="flex items-center space-x-2 mb-1">
             <h4 className="text-white font-medium">{task.title}</h4>
+            {task.description && (
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0"
+                aria-expanded={expanded}
+                aria-label={expanded ? 'Hide description' : 'Show description'}
+              >
+                <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={14} />
+              </button>
+            )}
             {task.dueDate && (
               <div className="flex items-center space-x-1">
                 {new Date(task.dueDate) < new Date() && (
@@ -18,8 +43,11 @@ const QueueCard = ({ task, index, onEdit, onDelete, onMoveUp, onMoveDown, onProm
               </div>
             )}
           </div>
+          {/* Expandable description */}
           {task.description && (
-            <p className="text-slate-400 text-sm">{task.description}</p>
+            <div className={`description-expand ${expanded ? 'expanded' : ''}`}>
+              <p className="text-slate-400 text-sm">{task.description}</p>
+            </div>
           )}
         </div>
 

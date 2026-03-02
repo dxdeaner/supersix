@@ -4,6 +4,8 @@
   --animate-fade-in: fadeIn 0.5s ease-in-out;
   --animate-slide-in: slideIn 0.3s ease-out;
   --animate-pulse-slow: pulse 3s infinite;
+  --animate-check-draw: checkDraw 0.4s ease-out forwards;
+  --animate-confetti-pop: confettiPop 0.8s ease-out forwards;
 }
 
 @keyframes fadeIn {
@@ -14,4 +16,60 @@
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes checkDraw {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes confettiPop {
+  0% { transform: scale(0) translate(0, 0); opacity: 1; }
+  50% { opacity: 1; }
+  100% { transform: scale(1) translate(var(--confetti-x), var(--confetti-y)); opacity: 0; }
+}
+
+@keyframes confettiSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(var(--confetti-rot, 360deg)); }
+}
+
+/* Expandable description transition */
+.description-expand {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+  opacity: 0;
+}
+
+.description-expand.expanded {
+  max-height: 200px;
+  opacity: 1;
+}
+
+/* Completion celebration overlay */
+.completion-overlay {
+  animation: completionFade 1.2s ease-out forwards;
+}
+
+@keyframes completionFade {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.completion-check {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: checkDraw 0.4s 0.15s ease-out forwards;
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  animation: confettiPop 0.8s 0.2s ease-out forwards, confettiSpin 0.8s 0.2s linear forwards;
+  opacity: 0;
 }

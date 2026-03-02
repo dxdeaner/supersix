@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import Icon from './Icon';
 import useFocusTrap from '../hooks/useFocusTrap';
 
-const QuickAddModal = ({ isOpen, onClose, onAdd, loading }) => {
+const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
   const [newTask, setNewTask] = useState('');
   const dialogRef = useRef(null);
 
@@ -34,7 +34,7 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading }) => {
         className="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-slate-700"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 id="quick-add-title" className="text-xl font-semibold text-white">Add Task To Queue</h2>
+          <h2 id="quick-add-title" className="text-xl font-semibold text-white">Add Task</h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-white"
@@ -58,6 +58,9 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading }) => {
               placeholder="What needs to get done?"
             />
           </div>
+          <p className={`text-xs ${hasActiveRoom ? 'text-cyan-400' : 'text-orange-400'}`}>
+            {hasActiveRoom ? 'Will be added to Active Focus' : 'Will be added to Queue'}
+          </p>
         </div>
 
         <div className="flex space-x-2 justify-end mt-6">

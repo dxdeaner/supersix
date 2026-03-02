@@ -69,17 +69,26 @@ const App = () => {
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [draggedFromIndex, setDraggedFromIndex] = useState(null);
+  const [dragSource, setDragSource] = useState(null); // 'active' | 'queue'
+
+  // Completion animation state
+  const [completingTask, setCompletingTask] = useState(null);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Drag and drop handlers
-  const handleDragStart = (taskId, fromIndex) => {
+  const handleDragStart = (taskId, fromIndex, section) => {
     setDraggedTask(taskId);
     setDraggedFromIndex(fromIndex);
+    setDragSource(section || 'active');
   };
 
   const handleDragEnd = () => {
     setDraggedTask(null);
     setDragOverIndex(null);
     setDraggedFromIndex(null);
+    setDragSource(null);
   };
 
   const handleDragOver = (overIndex) => {
@@ -87,19 +96,31 @@ const App = () => {
   };
 
   const handleDrop = async (toIndex) => {
-    if (draggedTask && draggedFromIndex !== null && draggedFromIndex !== toIndex) {
-      // Determine direction and call existing reorder API
+    if (draggedTask && dragSource === 'active' && draggedFromIndex !== null && draggedFromIndex !== toIndex) {
+      // Active-to-active reorder
       if (draggedFromIndex < toIndex) {
-        // Moving down - need multiple moves
         for (let i = draggedFromIndex; i < toIndex; i++) {
           await moveTaskDown(draggedTask);
         }
       } else {
-        // Moving up - need multiple moves
         for (let i = draggedFromIndex; i > toIndex; i--) {
           await moveTaskUp(draggedTask);
         }
       }
+    }
+    handleDragEnd();
+  };
+
+  // Drop handler for empty active slots (queue → active promotion)
+  const handleEmptySlotDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleEmptySlotDrop = async (e) => {
+    e.preventDefault();
+    if (draggedTask && dragSource === 'queue') {
+      await promoteTask(draggedTask);
     }
     handleDragEnd();
   };
@@ -439,8 +460,8 @@ const App = () => {
       }
     });
 
-  // Task management functions — Phase 4: optimistic updates
-  const completeTask = withOptimistic(
+  // Task management functions — Phase 4: optimistic updates (+ completion animation)
+  const completeTaskInner = withOptimistic(
     (taskId) => api.completeTask(taskId),
     (taskId) => {
       setTasks(prev => prev.map(t =>
@@ -448,9 +469,18 @@ const App = () => {
           ? { ...t, status: 'completed', completedAt: new Date().toISOString() }
           : t
       ));
+      setCompletingTask(null);
     },
     () => [[setTasks, [...tasks]]]
   );
+
+  const completeTask = (taskId) => {
+    // Start animation, then after 1.2s perform the actual completion
+    setCompletingTask(taskId);
+    setTimeout(() => {
+      completeTaskInner(taskId);
+    }, 1200);
+  };
 
   const postponeTask = withOptimistic(
     (taskId) => api.postponeTask(taskId),
@@ -556,23 +586,46 @@ const App = () => {
     async () => {
       const trimmed = newTask.trim();
       if (!trimmed) return;
-      await api.createTask(currentBoard, trimmed);
+      const activeCount = tasks.filter(t => t.status === 'active').length;
+      const result = await api.createTask(currentBoard, trimmed);
+      // Auto-promote if there's room in active focus
+      if (activeCount < MAX_ACTIVE_TASKS && result && result.id) {
+        await api.promoteTask(result.id);
+      }
     },
     () => {
       const trimmed = newTask.trim();
       if (!trimmed) return;
-      const maxQueuePos = Math.max(0, ...tasks.filter(t => t.status === 'queued').map(t => t.position));
-      const tempTask = {
-        id: 'temp-' + Date.now(),
-        title: trimmed,
-        status: 'queued',
-        position: maxQueuePos + 1,
-        boardId: currentBoard,
-        description: '',
-        dueDate: null,
-        completedAt: null,
-      };
-      setTasks(prev => [...prev, tempTask]);
+      const activeCount = tasks.filter(t => t.status === 'active').length;
+      const hasRoom = activeCount < MAX_ACTIVE_TASKS;
+
+      if (hasRoom) {
+        const maxActivePos = Math.max(0, ...tasks.filter(t => t.status === 'active').map(t => t.position));
+        const tempTask = {
+          id: 'temp-' + Date.now(),
+          title: trimmed,
+          status: 'active',
+          position: maxActivePos + 1,
+          boardId: currentBoard,
+          description: '',
+          dueDate: null,
+          completedAt: null,
+        };
+        setTasks(prev => [...prev, tempTask]);
+      } else {
+        const maxQueuePos = Math.max(0, ...tasks.filter(t => t.status === 'queued').map(t => t.position));
+        const tempTask = {
+          id: 'temp-' + Date.now(),
+          title: trimmed,
+          status: 'queued',
+          position: maxQueuePos + 1,
+          boardId: currentBoard,
+          description: '',
+          dueDate: null,
+          completedAt: null,
+        };
+        setTasks(prev => [...prev, tempTask]);
+      }
       setNewTask('');
     },
     () => [[setTasks, [...tasks]], [setNewTask, newTask]]
@@ -965,6 +1018,33 @@ const App = () => {
             </div>
           )}
 
+          {/* Search Bar */}
+          <div className="mb-4">
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <Icon name="search" size={16} />
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Escape') setSearchQuery(''); }}
+                placeholder="Search tasks..."
+                aria-label="Search tasks"
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-10 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  aria-label="Clear search"
+                >
+                  <Icon name="x" size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Tab Navigation with Add Button (Phase 3: ARIA tabs) */}
           <div className={`mb-6 ${windowWidth >= 768 ? 'relative flex justify-center' : 'flex justify-center items-center space-x-4'}`}>
             <button
@@ -1004,7 +1084,150 @@ const App = () => {
           </div>
 
           {/* Content */}
-          {activeTab === 'active' ? (
+          {searchQuery.trim() ? (
+            /* Search Results View */
+            (() => {
+              const query = searchQuery.trim().toLowerCase();
+              const matchActive = activeTasks.filter(t =>
+                t.title.toLowerCase().includes(query) ||
+                (t.description && t.description.toLowerCase().includes(query))
+              );
+              const matchQueued = queuedTasks.filter(t =>
+                t.title.toLowerCase().includes(query) ||
+                (t.description && t.description.toLowerCase().includes(query))
+              );
+              const matchCompleted = completedTasks.filter(t =>
+                t.title.toLowerCase().includes(query) ||
+                (t.description && t.description.toLowerCase().includes(query))
+              );
+              const totalResults = matchActive.length + matchQueued.length + matchCompleted.length;
+
+              return (
+                <div>
+                  <p className="text-slate-400 text-sm mb-4" aria-live="polite">
+                    {totalResults} {totalResults === 1 ? 'task' : 'tasks'} found
+                  </p>
+
+                  {totalResults === 0 && (
+                    <div className="text-center py-12">
+                      <div className="text-slate-500 mb-2">
+                        <Icon name="search" size={40} />
+                      </div>
+                      <p className="text-slate-400">No tasks match your search</p>
+                    </div>
+                  )}
+
+                  {matchActive.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-medium text-slate-400 mb-2 flex items-center">
+                        <span className="inline-block w-2 h-2 bg-cyan-400 rounded-full mr-2"></span>
+                        Active ({matchActive.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {matchActive.map(task => (
+                          <div
+                            key={task.id}
+                            className="bg-slate-800 rounded-lg p-3 border border-cyan-500/30 cursor-pointer hover:border-cyan-400/50 transition-colors"
+                            onClick={() => editTask(task.id)}
+                          >
+                            <h4 className="text-white font-medium">{task.title}</h4>
+                            {task.description && (
+                              <p className="text-slate-400 text-sm mt-1 line-clamp-1">{task.description}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {matchQueued.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-medium text-slate-400 mb-2 flex items-center">
+                        <span className="inline-block w-2 h-2 bg-orange-400 rounded-full mr-2"></span>
+                        Queued ({matchQueued.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {matchQueued.map(task => (
+                          <div
+                            key={task.id}
+                            className="bg-slate-800/50 rounded-lg p-3 border border-orange-500/30 cursor-pointer hover:border-orange-400/50 transition-colors"
+                            onClick={() => editTask(task.id)}
+                          >
+                            <h4 className="text-white font-medium">{task.title}</h4>
+                            {task.description && (
+                              <p className="text-slate-400 text-sm mt-1 line-clamp-1">{task.description}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {matchCompleted.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-medium text-slate-400 mb-2 flex items-center">
+                        <span className="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                        Completed ({matchCompleted.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {matchCompleted.map(task => (
+                          <div
+                            key={task.id}
+                            className="bg-slate-800/50 rounded-lg p-3 border border-green-500/30"
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="text-white font-medium line-through opacity-75">{task.title}</h4>
+                                {task.description && (
+                                  <p className="text-slate-500 text-sm mt-1 line-clamp-1">{task.description}</p>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => undoComplete(task.id)}
+                                className="text-yellow-400 hover:text-yellow-300 text-sm flex-shrink-0 ml-2"
+                                aria-label={`Undo completion of ${task.title}`}
+                              >
+                                Undo
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()
+          ) : tasks.length === 0 && !loading ? (
+            /* Empty State for New Boards */
+            <div className="text-center py-16">
+              {/* Clipboard illustration */}
+              <svg width="120" height="120" viewBox="0 0 120 120" fill="none" className="mx-auto mb-6">
+                <rect x="25" y="20" width="70" height="85" rx="8" stroke="#475569" strokeWidth="2" fill="#1e293b" />
+                <rect x="40" y="10" width="40" height="16" rx="4" stroke="#475569" strokeWidth="2" fill="#334155" />
+                <circle cx="60" cy="18" r="3" fill="#22d3ee" />
+                <rect x="38" y="42" width="44" height="4" rx="2" fill="#334155" />
+                <rect x="38" y="54" width="36" height="4" rx="2" fill="#334155" />
+                <rect x="38" y="66" width="40" height="4" rx="2" fill="#334155" />
+                <rect x="38" y="78" width="28" height="4" rx="2" fill="#334155" />
+                {/* Sparkle */}
+                <path d="M90 25l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#f97316" opacity="0.8" />
+                <path d="M20 70l1.5 4.5 4.5 1.5-4.5 1.5-1.5 4.5-1.5-4.5-4.5-1.5 4.5-1.5z" fill="#22d3ee" opacity="0.6" />
+              </svg>
+
+              <h2 className="text-2xl font-semibold text-white mb-3">Ready to focus?</h2>
+              <p className="text-slate-400 max-w-sm mx-auto mb-8">
+                Add your first task to get started. SuperSix keeps you focused on what matters most.
+              </p>
+              <button
+                onClick={() => setShowQuickAddModal(true)}
+                className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center space-x-2"
+              >
+                <Icon name="plus" size={20} />
+                <span>Add Your First Task</span>
+              </button>
+            </div>
+          ) : activeTab === 'active' ? (
             <div
               id="tabpanel-active"
               role="tabpanel"
@@ -1029,6 +1252,7 @@ const App = () => {
                         task={task}
                         index={slotIndex}
                         isCurrentFocus={isCurrentFocus}
+                        isCompleting={completingTask === task.id}
                         onComplete={completeTask}
                         onPostpone={postponeTask}
                         onEdit={editTask}
@@ -1049,13 +1273,15 @@ const App = () => {
                     ) : (
                       <div
                         key={slotIndex}
-                        className="relative bg-slate-800 rounded-lg p-4 border-2 border-dashed border-slate-600"
+                        className={`relative bg-slate-800 rounded-lg p-4 border-2 border-dashed transition-colors ${dragSource === 'queue' ? 'border-cyan-400/50 bg-cyan-400/5' : 'border-slate-600'}`}
+                        onDragOver={handleEmptySlotDragOver}
+                        onDrop={handleEmptySlotDrop}
                       >
                         <div className="absolute left-0 -top-3 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold bg-slate-700 text-slate-300">
                           {slotIndex + 1}
                         </div>
                         <div className="ml-4 text-slate-500 italic">
-                          Empty slot - promote from queue or add new task
+                          {dragSource === 'queue' ? 'Drop here to activate' : 'Empty slot - promote from queue or add new task'}
                         </div>
                       </div>
                     );
@@ -1087,6 +1313,8 @@ const App = () => {
                           canMoveDown={index < queuedTasks.length - 1}
                           isMoving={movingTask === task.id}
                           subtasks={subtasks}
+                          onDragStart={handleDragStart}
+                          onDragEnd={handleDragEnd}
                         />
                       ))}
                     </div>
@@ -1104,7 +1332,7 @@ const App = () => {
                         value={newTask}
                         onChange={(e) => setNewTask(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && addTask()}
-                        placeholder="Add new task to queue..."
+                        placeholder={activeTasks.length < MAX_ACTIVE_TASKS ? 'Add new task (auto-activates)...' : 'Add new task to queue...'}
                         aria-label="New task title"
                         className="flex-1 bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
                       />
@@ -1164,16 +1392,23 @@ const App = () => {
       <QuickAddModal
         isOpen={showQuickAddModal}
         onClose={() => setShowQuickAddModal(false)}
-        onAdd={(taskTitle) => {
+        onAdd={async (taskTitle) => {
           if (currentBoard) {
-            api.createTask(currentBoard, taskTitle).then(() => {
+            try {
+              const activeCount = tasks.filter(t => t.status === 'active').length;
+              const result = await api.createTask(currentBoard, taskTitle);
+              // Auto-promote if there's room in active focus
+              if (activeCount < MAX_ACTIVE_TASKS && result && result.id) {
+                await api.promoteTask(result.id);
+              }
               loadTasks();
-            }).catch(err => {
+            } catch (err) {
               setError('Failed to add task: ' + err.message);
-            });
+            }
           }
         }}
         loading={loading}
+        hasActiveRoom={activeTasks.length < MAX_ACTIVE_TASKS}
       />
 
       {/* Auth Modal */}
