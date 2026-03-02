@@ -1,6 +1,5 @@
 <?php
 // Temporary diagnostic — DELETE after use
-// Force ALL errors to display on screen
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 header('Content-Type: text/plain');
@@ -8,40 +7,56 @@ header('Content-Type: text/plain');
 echo "=== DIAGNOSE START ===\n";
 echo "PHP " . PHP_VERSION . "\n\n";
 
-// Step 1: Does security.php exist?
-$secPath = __DIR__ . '/security.php';
-echo "security.php path: $secPath\n";
-echo "security.php exists: " . (file_exists($secPath) ? 'YES' : 'NO') . "\n";
+// Simulate EXACTLY what auth.php does
+echo "Step 1: require_once config.php (just like auth.php line 3)\n";
+require_once 'config.php';
+echo "config.php loaded OK\n\n";
 
-if (file_exists($secPath)) {
-    echo "security.php size: " . filesize($secPath) . " bytes\n";
-    echo "security.php md5: " . md5_file($secPath) . "\n\n";
+echo "Step 2: new Database + connect (just like auth.php lines 7-8)\n";
+$database = new Database();
+$pdo = $database->connect();
+echo "Database connected OK\n\n";
 
-    echo "--- FIRST 500 CHARS ---\n";
-    echo substr(file_get_contents($secPath), 0, 500) . "\n";
-    echo "--- END ---\n\n";
+echo "Step 3: Check if functions from security.php exist\n";
+echo "startSecureSession: " . (function_exists('startSecureSession') ? 'YES' : 'NO') . "\n";
+echo "generateCsrfToken: " . (function_exists('generateCsrfToken') ? 'YES' : 'NO') . "\n";
+echo "checkRateLimit: " . (function_exists('checkRateLimit') ? 'YES' : 'NO') . "\n";
+echo "validateCsrf: " . (function_exists('validateCsrf') ? 'YES' : 'NO') . "\n";
+echo "sendResponse: " . (function_exists('sendResponse') ? 'YES' : 'NO') . "\n";
+echo "enforceMaxLengths: " . (function_exists('enforceMaxLengths') ? 'YES' : 'NO') . "\n\n";
 
-    // Try to include it
-    echo "Including security.php...\n";
-    try {
-        include_once $secPath;
-        echo "Include completed.\n";
-    } catch (Throwable $e) {
-        echo "Include THREW: " . $e->getMessage() . "\n";
-    }
-
-    echo "startSecureSession exists: " . (function_exists('startSecureSession') ? 'YES' : 'NO') . "\n";
-    echo "generateCsrfToken exists: " . (function_exists('generateCsrfToken') ? 'YES' : 'NO') . "\n";
-    echo "checkRateLimit exists: " . (function_exists('checkRateLimit') ? 'YES' : 'NO') . "\n";
-} else {
-    echo "!! security.php NOT FOUND !!\n";
+echo "Step 4: Try calling startSecureSession()\n";
+try {
+    startSecureSession();
+    echo "Session started OK! ID: " . substr(session_id(), 0, 8) . "...\n\n";
+} catch (Throwable $e) {
+    echo "FAILED: " . $e->getMessage() . "\n\n";
 }
 
-echo "\n--- FILES IN " . __DIR__ . " ---\n";
-foreach (scandir(__DIR__) as $f) {
-    if ($f !== '.' && $f !== '..') {
-        echo "  $f (" . filesize(__DIR__ . '/' . $f) . " bytes)\n";
+echo "Step 5: Try calling generateCsrfToken()\n";
+try {
+    $token = generateCsrfToken();
+    echo "CSRF token OK! Length: " . strlen($token) . "\n\n";
+} catch (Throwable $e) {
+    echo "FAILED: " . $e->getMessage() . "\n\n";
+}
+
+echo "Step 6: Check config.php content around require_once line\n";
+$configContent = file_get_contents(__DIR__ . '/config.php');
+$lines = explode("\n", $configContent);
+foreach ($lines as $i => $line) {
+    $num = $i + 1;
+    if ($num >= 68 && $num <= 75) {
+        echo "  line $num: $line\n";
     }
+}
+
+echo "\nStep 7: Check .htaccess\n";
+$htaccess = __DIR__ . '/.htaccess';
+if (file_exists($htaccess)) {
+    echo file_get_contents($htaccess) . "\n";
+} else {
+    echo "No .htaccess found\n";
 }
 
 echo "\n=== DIAGNOSE END ===\n";
