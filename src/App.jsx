@@ -104,17 +104,6 @@ const App = () => {
     handleDragEnd();
   };
 
-  // Auto-load subtasks for all tasks when tasks change
-  useEffect(() => {
-    if (tasks.length > 0) {
-      tasks.forEach(task => {
-        if (!subtasks[task.id] && !loadingSubtasks[task.id]) {
-          loadSubtasks(task.id);
-        }
-      });
-    }
-  }, [tasks, currentBoard, subtasks, loadingSubtasks]);
-
   // Subtask state
   const [subtasks, setSubtasks] = useState({});
   const [loadingSubtasks, setLoadingSubtasks] = useState({});
@@ -193,6 +182,17 @@ const App = () => {
   const [boardMenuOpen, setBoardMenuOpen] = useState(null);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
+
+  // Auto-load subtasks for all tasks when tasks change
+  useEffect(() => {
+    if (tasks.length > 0) {
+      tasks.forEach(task => {
+        if (!subtasks[task.id] && !loadingSubtasks[task.id]) {
+          loadSubtasks(task.id);
+        }
+      });
+    }
+  }, [tasks, currentBoard, subtasks, loadingSubtasks]);
 
   // Modal refs for focus traps (Phase 3)
   const createBoardRef = useRef(null);
@@ -865,14 +865,8 @@ const App = () => {
               <h3 className="text-sm font-medium text-slate-400 mb-2">Archived</h3>
               <div className="space-y-1">
                 {boards.filter(board => board.archived).map(board => (
-                  <div key={board.id} className="flex items-center justify-between p-2 text-slate-500 text-sm">
+                  <div key={board.id} className="p-2 text-slate-500 text-sm">
                     <span>{board.name}</span>
-                    <button
-                      onClick={() => restoreBoard(board.id)}
-                      className="text-xs text-cyan-400 hover:text-cyan-300"
-                    >
-                      Restore
-                    </button>
                   </div>
                 ))}
               </div>
