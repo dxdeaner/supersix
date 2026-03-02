@@ -10,6 +10,45 @@ $result = [
     'steps' => [],
 ];
 
+// Step 0: Check security.php directly BEFORE loading config
+$secPath = __DIR__ . '/security.php';
+$result['security_file'] = [
+    'path' => $secPath,
+    'exists' => file_exists($secPath),
+    'size' => file_exists($secPath) ? filesize($secPath) : null,
+    'md5' => file_exists($secPath) ? md5_file($secPath) : null,
+    'first_200_chars' => file_exists($secPath) ? substr(file_get_contents($secPath), 0, 200) : null,
+    'last_200_chars' => file_exists($secPath) ? substr(file_get_contents($secPath), -200) : null,
+];
+
+// Step 0b: Try to include security.php directly with error capture
+$result['security_direct_include'] = 'not tested';
+try {
+    $oldLevel = error_reporting(0);
+    ob_start();
+    $includeResult = include_once $secPath;
+    $output = ob_get_clean();
+    error_reporting($oldLevel);
+    $result['security_direct_include'] = [
+        'return' => $includeResult,
+        'output' => $output ?: '(none)',
+        'function_exists_startSecureSession' => function_exists('startSecureSession'),
+        'function_exists_generateCsrfToken' => function_exists('generateCsrfToken'),
+        'function_exists_checkRateLimit' => function_exists('checkRateLimit'),
+        'function_exists_validateCsrf' => function_exists('validateCsrf'),
+    ];
+} catch (Throwable $e) {
+    $result['security_direct_include'] = 'EXCEPTION: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine();
+}
+
+// Step 0c: Try php syntax check via command line
+$syntaxCheck = null;
+exec('php -l ' . escapeshellarg($secPath) . ' 2>&1', $syntaxOutput, $syntaxCode);
+$result['security_syntax_check'] = [
+    'exit_code' => $syntaxCode,
+    'output' => implode("\n", $syntaxOutput),
+];
+
 // Step 1: Can we load config.php?
 try {
     require_once 'config.php';
@@ -45,18 +84,7 @@ try {
     $result['steps'][] = 'CSRF token FAILED: ' . $e->getMessage();
 }
 
-// Step 5: Check if users table exists
-try {
-    if (isset($pdo)) {
-        $stmt = $pdo->query("SHOW TABLES LIKE 'users'");
-        $exists = $stmt->rowCount() > 0;
-        $result['steps'][] = 'Users table: ' . ($exists ? 'EXISTS' : 'MISSING');
-    }
-} catch (Throwable $e) {
-    $result['steps'][] = 'Table check FAILED: ' . $e->getMessage();
-}
-
-// Step 6: Check PHP error log for recent errors
+// Step 5: Check error log
 $logPaths = [
     __DIR__ . '/error_log',
     $_SERVER['DOCUMENT_ROOT'] . '/error_log',
@@ -80,10 +108,6 @@ foreach ($logPaths as $logPath) {
         ];
         break;
     }
-}
-
-if (!isset($result['error_log'])) {
-    $result['error_log'] = 'No readable error log found';
 }
 
 echo json_encode($result, JSON_PRETTY_PRINT);
