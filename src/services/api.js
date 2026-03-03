@@ -230,6 +230,13 @@ const api = {
       method: 'DELETE',
     });
   },
+
+  async updateSubtask(subtaskId, title) {
+    return this.request('/subtasks.php', {
+      method: 'PUT',
+      body: JSON.stringify({ id: subtaskId, title }),
+    });
+  },
 };
 
 export default api;

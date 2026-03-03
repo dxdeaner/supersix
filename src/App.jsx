@@ -182,6 +182,26 @@ const App = () => {
     }
   };
 
+  const updateSubtaskTitle = async (subtaskId, taskId, newTitle) => {
+    if (!newTitle.trim()) return;
+
+    const prevSubtasks = { ...subtasks };
+    setSubtasks(prev => ({
+      ...prev,
+      [taskId]: (prev[taskId] || []).map(s =>
+        s.id === subtaskId ? { ...s, title: newTitle.trim() } : s
+      )
+    }));
+
+    try {
+      await api.updateSubtask(subtaskId, newTitle.trim());
+      scheduleReconcileSubtasks(taskId);
+    } catch (err) {
+      setSubtasks(prevSubtasks);
+      setError('Failed to update subtask: ' + err.message);
+    }
+  };
+
   // Existing app state
   const [boards, setBoards] = useState([]);
   const [currentBoard, setCurrentBoard] = useState(null);
@@ -203,6 +223,7 @@ const App = () => {
   const [boardMenuOpen, setBoardMenuOpen] = useState(null);
   const [showQuickAddModal, setShowQuickAddModal] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [viewingTaskId, setViewingTaskId] = useState(null);
 
   // Auto-load subtasks for all tasks when tasks change
   useEffect(() => {
@@ -219,6 +240,7 @@ const App = () => {
   const createBoardRef = useRef(null);
   const editBoardRef = useRef(null);
   const editTaskRef = useRef(null);
+  const viewTaskRef = useRef(null);
   const deleteConfirmRef = useRef(null);
 
   // Focus traps for inline modals (Phase 3)
@@ -228,6 +250,7 @@ const App = () => {
   });
   useFocusTrap(editBoardRef, !!editingBoard, () => setEditingBoard(null));
   useFocusTrap(editTaskRef, !!editingTask, () => setEditingTask(null));
+  useFocusTrap(viewTaskRef, !!viewingTaskId, () => setViewingTaskId(null));
   useFocusTrap(deleteConfirmRef, !!deleteConfirm, () => setDeleteConfirm(null));
 
   // Error toast auto-dismiss (Phase 3: fix transient error bug)
@@ -644,6 +667,17 @@ const App = () => {
     loadSubtasks(taskId);
   };
 
+  const viewTask = (taskId) => {
+    setViewingTaskId(taskId);
+    loadSubtasks(taskId);
+  };
+
+  const viewToEdit = () => {
+    const id = viewingTaskId;
+    setViewingTaskId(null);
+    editTask(id);
+  };
+
   const saveEdit = withOptimistic(
     async () => {
       await api.updateTask(
@@ -780,6 +814,8 @@ const App = () => {
   const completedTasks = tasks
     .filter(task => task.status === 'completed')
     .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+  const viewingTask = viewingTaskId ? tasks.find(t => t.id === viewingTaskId) : null;
 
   if (loading && !user) {
     return <LoadingScreen />;
@@ -1128,7 +1164,7 @@ const App = () => {
                           <div
                             key={task.id}
                             className="bg-slate-800 rounded-lg p-3 border border-cyan-500/30 cursor-pointer hover:border-cyan-400/50 transition-colors"
-                            onClick={() => editTask(task.id)}
+                            onClick={() => viewTask(task.id)}
                           >
                             <h4 className="text-white font-medium">{task.title}</h4>
                             {task.description && (
@@ -1151,7 +1187,7 @@ const App = () => {
                           <div
                             key={task.id}
                             className="bg-slate-800/50 rounded-lg p-3 border border-orange-500/30 cursor-pointer hover:border-orange-400/50 transition-colors"
-                            onClick={() => editTask(task.id)}
+                            onClick={() => viewTask(task.id)}
                           >
                             <h4 className="text-white font-medium">{task.title}</h4>
                             {task.description && (
@@ -1256,6 +1292,7 @@ const App = () => {
                         onComplete={completeTask}
                         onPostpone={postponeTask}
                         onEdit={editTask}
+                        onView={viewTask}
                         onDelete={(taskId) => setDeleteConfirm(taskId)}
                         onMoveUp={moveTaskUp}
                         onMoveDown={moveTaskDown}
@@ -1305,6 +1342,7 @@ const App = () => {
                           task={task}
                           index={index}
                           onEdit={editTask}
+                          onView={viewTask}
                           onDelete={(taskId) => setDeleteConfirm(taskId)}
                           onMoveUp={moveTaskUp}
                           onMoveDown={moveTaskDown}
@@ -1510,6 +1548,81 @@ const App = () => {
         </div>
       )}
 
+      {/* View Task Modal */}
+      {viewingTask && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div
+            ref={viewTaskRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="view-task-title"
+            className="bg-slate-800 rounded-lg p-6 max-w-md mx-4 border border-slate-700 w-full"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 id="view-task-title" className="text-white font-semibold">Task Details</h3>
+              <button
+                onClick={() => setViewingTaskId(null)}
+                className="text-slate-400 hover:text-white transition-colors"
+                aria-label="Close dialog"
+              >
+                <Icon name="x" size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-slate-400 text-xs font-medium mb-1 uppercase tracking-wider">Title</label>
+                <p className="text-white text-lg font-medium">{viewingTask.title}</p>
+              </div>
+
+              {viewingTask.description && (
+                <div>
+                  <label className="block text-slate-400 text-xs font-medium mb-1 uppercase tracking-wider">Description</label>
+                  <p className="text-slate-300 text-sm whitespace-pre-wrap">{viewingTask.description}</p>
+                </div>
+              )}
+
+              {viewingTask.dueDate && (
+                <div>
+                  <label className="block text-slate-400 text-xs font-medium mb-1 uppercase tracking-wider">Due Date</label>
+                  <div className="flex items-center space-x-2">
+                    <Icon name="clock" size={14} />
+                    <span className={`text-sm ${new Date(viewingTask.dueDate) < new Date() ? 'text-red-400' : 'text-slate-300'}`}>
+                      {new Date(viewingTask.dueDate).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <SubtaskList
+                taskId={viewingTask.id}
+                subtasks={subtasks}
+                onToggle={toggleSubtask}
+                onUpdate={updateSubtaskTitle}
+                loading={loadingSubtasks[viewingTask.id]}
+                mode="view"
+              />
+            </div>
+
+            <div className="flex space-x-2 justify-end mt-6">
+              <button
+                onClick={() => setViewingTaskId(null)}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={viewToEdit}
+                className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded transition-colors flex items-center space-x-1"
+              >
+                <Icon name="edit-3" size={14} />
+                <span>Edit</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Task Modal */}
       {editingTask && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -1599,7 +1712,9 @@ const App = () => {
                 onAdd={addSubtask}
                 onToggle={toggleSubtask}
                 onDelete={deleteSubtask}
+                onUpdate={updateSubtaskTitle}
                 loading={loadingSubtasks[editingTask.id]}
+                mode="edit"
               />
             </div>
 

@@ -14,7 +14,7 @@ const CONFETTI_PIECES = Array.from({ length: 12 }, (_, i) => {
   };
 });
 
-const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPostpone, onEdit, onDelete, onMoveUp, onMoveDown, onDemote, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks }) => {
+const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks }) => {
   const [expanded, setExpanded] = useState(false);
 
   const handleDragStart = (e) => {
@@ -154,11 +154,11 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
               <span>Postpone</span>
             </button>
             <button
-              onClick={() => onEdit(task.id)}
+              onClick={() => onView(task.id)}
               className="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center space-x-1"
             >
-              <Icon name="edit-3" size={14} />
-              <span>Edit</span>
+              <Icon name="eye" size={14} />
+              <span>View</span>
             </button>
             <button
               onClick={() => onDemote(task.id)}

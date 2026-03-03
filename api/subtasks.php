@@ -240,4 +240,38 @@ function deleteSubtask($pdo) {
         sendResponse(['error' => 'Failed to delete subtask'], 500);
     }
 }
+
+function updateSubtask($pdo) {
+    if (!isset($_SESSION['user_id'])) {
+        sendResponse(['error' => 'Authentication required'], 401);
+    }
+    $userId = $_SESSION['user_id'];
+
+    $data = getJsonInput();
+    validateRequired($data, ['id', 'title']);
+    enforceMaxLengths($data, ['title' => MAX_LENGTHS['title']]);
+
+    try {
+        // Verify subtask belongs to user
+        $stmt = $pdo->prepare("
+            SELECT s.id
+            FROM subtasks s
+            JOIN tasks t ON s.task_id = t.id
+            JOIN boards b ON t.board_id = b.id
+            WHERE s.id = ? AND b.user_id = ?
+        ");
+        $stmt->execute([$data['id'], $userId]);
+        if (!$stmt->fetch()) {
+            sendResponse(['error' => 'Subtask not found or access denied'], 404);
+        }
+
+        $stmt = $pdo->prepare("UPDATE subtasks SET title = ? WHERE id = ?");
+        $stmt->execute([trim($data['title']), $data['id']]);
+
+        sendResponse(['message' => 'Subtask updated successfully']);
+    } catch (PDOException $e) {
+        error_log("Update subtask error: " . $e->getMessage());
+        sendResponse(['error' => 'Failed to update subtask'], 500);
+    }
+}
 ?>

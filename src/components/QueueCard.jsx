@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Icon from './Icon';
 
-const QueueCard = ({ task, index, onEdit, onDelete, onMoveUp, onMoveDown, onPromote, canMoveUp, canMoveDown, isMoving, subtasks, onDragStart, onDragEnd }) => {
+const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown, onPromote, canMoveUp, canMoveDown, isMoving, subtasks, onDragStart, onDragEnd }) => {
   const [expanded, setExpanded] = useState(false);
 
   const handleDragStart = (e) => {
@@ -83,12 +83,12 @@ const QueueCard = ({ task, index, onEdit, onDelete, onMoveUp, onMoveDown, onProm
           </div>
 
           <button
-            onClick={() => onEdit(task.id)}
+            onClick={() => onView(task.id)}
             className="text-slate-400 hover:text-slate-300 p-1 transition-colors hover:bg-slate-600/50 rounded"
-            title="Edit task"
-            aria-label="Edit task"
+            title="View task"
+            aria-label="View task"
           >
-            <Icon name="edit-3" size={14} />
+            <Icon name="eye" size={14} />
           </button>
           <button
             onClick={() => onDelete(task.id)}
