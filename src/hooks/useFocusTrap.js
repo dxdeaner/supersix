@@ -1,11 +1,12 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export default function useFocusTrap(containerRef, isOpen, onClose) {
   const previouslyFocused = useRef(null);
-  const stableOnClose = useCallback(() => onClose(), [onClose]);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!isOpen || !containerRef.current) return;
@@ -26,7 +27,7 @@ export default function useFocusTrap(containerRef, isOpen, onClose) {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        stableOnClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -55,5 +56,5 @@ export default function useFocusTrap(containerRef, isOpen, onClose) {
         previouslyFocused.current.focus();
       }
     };
-  }, [isOpen, stableOnClose, containerRef]);
+  }, [isOpen, containerRef]);
 }
