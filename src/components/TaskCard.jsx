@@ -104,7 +104,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
           </button>
         </div>
 
-        <div className="ml-4 mr-8">
+        <div className="ml-8 mr-8">
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center flex-1 mr-4">
               <h3 className="font-medium text-white">{task.title}</h3>
