@@ -850,8 +850,7 @@ const App = () => {
       {/* Sidebar */}
       <nav
         aria-label="Boards"
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-800 border-r border-slate-700 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ transform: windowWidth >= DESKTOP_BREAKPOINT ? 'translateX(0)' : undefined, position: windowWidth >= DESKTOP_BREAKPOINT ? 'static' : 'fixed' }}
+        className={`w-64 bg-slate-800 border-r border-slate-700 transition-transform duration-300 ease-in-out ${windowWidth >= DESKTOP_BREAKPOINT ? 'static shrink-0' : `fixed inset-y-0 left-0 z-50 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}`}
       >
         <div className="flex items-center justify-between h-16 px-4 border-b border-slate-700">
           <h2 className="text-lg font-semibold text-white">Boards</h2>
