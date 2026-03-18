@@ -37,7 +37,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
 
   return (
     <div
-      className={`relative bg-slate-800 rounded-lg p-4 border-2 transition-all duration-200 ease-in-out cursor-pointer hover:cursor-grab active:cursor-grabbing ${isMoving ? 'transform scale-105 shadow-lg shadow-cyan-400/20' : ''} ${isCurrentFocus ? 'border-cyan-400 shadow-lg shadow-cyan-400/20 ring-1 ring-cyan-400/30' : 'border-slate-700 hover:border-slate-600'} ${isDragOver ? 'border-green-400 bg-green-500/40 animate-pulse shadow-lg shadow-green-400/50' : ''} ${isCompleting ? 'overflow-hidden' : ''}`}
+      className={`relative bg-slate-800 rounded-lg p-4 pl-6 border-2 transition-all duration-200 ease-in-out cursor-pointer hover:cursor-grab active:cursor-grabbing ${isMoving ? 'transform scale-105 shadow-lg shadow-cyan-400/20' : ''} ${isCurrentFocus ? 'border-cyan-400 shadow-lg shadow-cyan-400/20 ring-1 ring-cyan-400/30' : 'border-slate-700 hover:border-slate-600'} ${isDragOver ? 'border-green-400 bg-green-500/40 animate-pulse shadow-lg shadow-green-400/50' : ''} ${isCompleting ? 'overflow-hidden' : ''}`}
       draggable={!isCompleting}
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
@@ -78,7 +78,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
       )}
 
       <div className={`${isCompleting ? 'opacity-30' : ''} transition-opacity duration-200`}>
-        <div className={`absolute -left-3 left-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isCurrentFocus ? 'bg-gradient-to-r from-cyan-400 to-cyan-500 text-white shadow-lg' : 'bg-slate-700 text-slate-300'}`}>
+        <div className={`absolute left-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isCurrentFocus ? 'bg-gradient-to-r from-cyan-400 to-cyan-500 text-white shadow-lg' : 'bg-slate-700 text-slate-300'}`}>
           {index + 1}
         </div>
 
@@ -104,7 +104,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
           </button>
         </div>
 
-        <div className="ml-8 mr-8">
+        <div className="ml-12 mr-8">
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center flex-1 mr-4">
               <h3 className="font-medium text-white">{task.title}</h3>
