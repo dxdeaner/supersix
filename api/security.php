@@ -8,15 +8,11 @@ function startSecureSession(bool $rememberMe = false): void {
         return;
     }
 
-    $lifetime = $rememberMe ? (30 * 24 * 60 * 60) : 0;
-    $isHttps  = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    $isHttps = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 
-    if ($rememberMe) {
-        ini_set('session.gc_maxlifetime', 30 * 24 * 60 * 60);
-    }
-
+    // Start with a default (session-only) cookie so we can read the session
     session_set_cookie_params([
-        'lifetime' => $lifetime,
+        'lifetime' => 0,
         'path'     => '/',
         'domain'   => '',
         'secure'   => $isHttps,
@@ -25,6 +21,34 @@ function startSecureSession(bool $rememberMe = false): void {
     ]);
 
     session_start();
+
+    // Persist the flag when the caller sets it (login / register)
+    if ($rememberMe) {
+        $_SESSION['remember_me'] = true;
+    }
+
+    // Honour the stored preference on every subsequent request
+    if (!empty($_SESSION['remember_me'])) {
+        $lifetime = 30 * 24 * 60 * 60;
+        ini_set('session.gc_maxlifetime', $lifetime);
+        session_set_cookie_params([
+            'lifetime' => $lifetime,
+            'path'     => '/',
+            'domain'   => '',
+            'secure'   => $isHttps,
+            'httponly'  => true,
+            'samesite'  => 'Lax',
+        ]);
+        // Refresh the cookie with the long lifetime
+        setcookie(session_name(), session_id(), [
+            'expires'  => time() + $lifetime,
+            'path'     => '/',
+            'domain'   => '',
+            'secure'   => $isHttps,
+            'httponly'  => true,
+            'samesite' => 'Lax',
+        ]);
+    }
 }
 
 // ── CSRF Protection ─────────────────────────────────────────────────
