@@ -237,6 +237,31 @@ const api = {
       body: JSON.stringify({ id: subtaskId, title }),
     });
   },
+
+  // Journal endpoints
+  async getJournalEntries(boardId, page = 1) {
+    return this.request(`/journal.php?board_id=${boardId}&page=${page}`);
+  },
+
+  async createJournalEntry(boardId, content) {
+    return this.request('/journal.php', {
+      method: 'POST',
+      body: JSON.stringify({ board_id: boardId, content }),
+    });
+  },
+
+  async updateJournalEntry(id, content) {
+    return this.request('/journal.php', {
+      method: 'PUT',
+      body: JSON.stringify({ id, content }),
+    });
+  },
+
+  async deleteJournalEntry(id) {
+    return this.request(`/journal.php?id=${id}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 export default api;

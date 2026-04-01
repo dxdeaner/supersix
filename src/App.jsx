@@ -225,6 +225,16 @@ const App = () => {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [viewingTaskId, setViewingTaskId] = useState(null);
 
+  // Journal state
+  const [journalEntries, setJournalEntries] = useState([]);
+  const [journalLoading, setJournalLoading] = useState(false);
+  const [journalPage, setJournalPage] = useState(1);
+  const [journalHasMore, setJournalHasMore] = useState(false);
+  const [newJournalEntry, setNewJournalEntry] = useState('');
+  const [editingJournalId, setEditingJournalId] = useState(null);
+  const [editingJournalContent, setEditingJournalContent] = useState('');
+  const [journalDeleteConfirm, setJournalDeleteConfirm] = useState(null);
+
   // Auto-load subtasks for all tasks when tasks change
   useEffect(() => {
     if (tasks.length > 0) {
@@ -721,18 +731,92 @@ const App = () => {
     if (boardId !== currentBoard) {
       setSubtasks({});
       setCurrentBoard(boardId);
+      // Reset journal state
+      setJournalEntries([]);
+      setJournalPage(1);
+      setJournalHasMore(false);
+      setNewJournalEntry('');
+      setEditingJournalId(null);
+      setJournalDeleteConfirm(null);
     }
   };
 
+  // Journal functions
+  const loadJournalEntries = async (page = 1) => {
+    if (!currentBoard) return;
+    setJournalLoading(true);
+    try {
+      const data = await api.getJournalEntries(currentBoard, page);
+      if (page === 1) {
+        setJournalEntries(data.entries);
+      } else {
+        setJournalEntries(prev => [...prev, ...data.entries]);
+      }
+      setJournalHasMore(data.hasMore);
+      setJournalPage(page);
+    } catch (err) {
+      setError('Failed to load journal entries: ' + err.message);
+    } finally {
+      setJournalLoading(false);
+    }
+  };
+
+  const addJournalEntry = async () => {
+    const content = newJournalEntry.trim();
+    if (!content || !currentBoard) return;
+    try {
+      const entry = await api.createJournalEntry(currentBoard, content);
+      setJournalEntries(prev => [entry, ...prev]);
+      setNewJournalEntry('');
+    } catch (err) {
+      setError('Failed to add journal entry: ' + err.message);
+    }
+  };
+
+  const saveJournalEdit = async () => {
+    const content = editingJournalContent.trim();
+    if (!content || !editingJournalId) return;
+    try {
+      await api.updateJournalEntry(editingJournalId, content);
+      setJournalEntries(prev => prev.map(e =>
+        e.id === editingJournalId ? { ...e, content, updatedAt: new Date().toISOString() } : e
+      ));
+      setEditingJournalId(null);
+      setEditingJournalContent('');
+    } catch (err) {
+      setError('Failed to update journal entry: ' + err.message);
+    }
+  };
+
+  const deleteJournalEntry = async (id) => {
+    try {
+      await api.deleteJournalEntry(id);
+      setJournalEntries(prev => prev.filter(e => e.id !== id));
+      setJournalDeleteConfirm(null);
+    } catch (err) {
+      setError('Failed to delete journal entry: ' + err.message);
+    }
+  };
+
+  // Load journal entries when switching to journal tab
+  useEffect(() => {
+    if (activeTab === 'journal' && currentBoard && journalEntries.length === 0) {
+      loadJournalEntries(1);
+    }
+  }, [activeTab, currentBoard]);
+
   // ARIA tabs: arrow key navigation (Phase 3)
+  const tabOrder = ['active', 'completed', 'journal'];
   const handleTabKeyDown = (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
-      const next = activeTab === 'active' ? 'completed' : 'active';
+      const currentIndex = tabOrder.indexOf(activeTab);
+      const nextIndex = e.key === 'ArrowRight'
+        ? (currentIndex + 1) % tabOrder.length
+        : (currentIndex - 1 + tabOrder.length) % tabOrder.length;
+      const next = tabOrder[nextIndex];
       setActiveTab(next);
-      // Focus the newly active tab
-      const tabId = next === 'active' ? 'tab-active' : 'tab-completed';
-      document.getElementById(tabId)?.focus();
+      document.getElementById(`tab-${next}`)?.focus();
     }
   };
 
@@ -1115,6 +1199,19 @@ const App = () => {
               >
                 Completed
               </button>
+              <button
+                id="tab-journal"
+                role="tab"
+                aria-selected={activeTab === 'journal'}
+                aria-controls="tabpanel-journal"
+                tabIndex={activeTab === 'journal' ? 0 : -1}
+                onClick={() => setActiveTab('journal')}
+                onKeyDown={handleTabKeyDown}
+                className={`px-6 py-2 rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'journal' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
+              >
+                <Icon name="book-open" size={16} />
+                Journal
+              </button>
             </div>
           </div>
 
@@ -1385,7 +1482,7 @@ const App = () => {
                 </div>
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'completed' ? (
             /* Completed Tasks */
             <div
               id="tabpanel-completed"
@@ -1417,6 +1514,154 @@ const App = () => {
                 </div>
               ) : (
                 <p className="text-slate-500 italic text-center py-8">No completed tasks yet</p>
+              )}
+            </div>
+          ) : (
+            /* Journal */
+            <div
+              id="tabpanel-journal"
+              role="tabpanel"
+              aria-labelledby="tab-journal"
+            >
+              {/* New entry input */}
+              <div className="bg-slate-800 rounded-lg p-4 border border-slate-700 mb-6">
+                <textarea
+                  value={newJournalEntry}
+                  onChange={(e) => setNewJournalEntry(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      addJournalEntry();
+                    }
+                  }}
+                  placeholder="What's on your mind?"
+                  rows={3}
+                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 resize-none mb-3"
+                  aria-label="New journal entry"
+                />
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 text-xs">Ctrl+Enter to submit</span>
+                  <button
+                    onClick={addJournalEntry}
+                    disabled={!newJournalEntry.trim()}
+                    className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors"
+                  >
+                    Add Entry
+                  </button>
+                </div>
+              </div>
+
+              {/* Entries feed */}
+              {journalLoading && journalEntries.length === 0 ? (
+                <p className="text-slate-500 text-center py-8">Loading entries...</p>
+              ) : journalEntries.length === 0 ? (
+                <p className="text-slate-500 italic text-center py-8">No journal entries yet. Write your first one above!</p>
+              ) : (
+                <div className="space-y-2">
+                  {(() => {
+                    let lastDateLabel = '';
+                    return journalEntries.map((entry) => {
+                      const entryDate = new Date(entry.createdAt);
+                      const today = new Date();
+                      const yesterday = new Date();
+                      yesterday.setDate(yesterday.getDate() - 1);
+
+                      let dateLabel;
+                      if (entryDate.toDateString() === today.toDateString()) {
+                        dateLabel = 'Today';
+                      } else if (entryDate.toDateString() === yesterday.toDateString()) {
+                        dateLabel = 'Yesterday';
+                      } else {
+                        dateLabel = entryDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                      }
+
+                      const showHeader = dateLabel !== lastDateLabel;
+                      lastDateLabel = dateLabel;
+
+                      return (
+                        <div key={entry.id}>
+                          {showHeader && (
+                            <h3 className="text-slate-400 text-sm font-medium mt-4 mb-2 first:mt-0">{dateLabel}</h3>
+                          )}
+                          <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700 group">
+                            {editingJournalId === entry.id ? (
+                              <div>
+                                <textarea
+                                  value={editingJournalContent}
+                                  onChange={(e) => setEditingJournalContent(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                      e.preventDefault();
+                                      saveJournalEdit();
+                                    }
+                                    if (e.key === 'Escape') {
+                                      setEditingJournalId(null);
+                                      setEditingJournalContent('');
+                                    }
+                                  }}
+                                  rows={3}
+                                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400 resize-none mb-2"
+                                  autoFocus
+                                />
+                                <div className="flex gap-2 justify-end">
+                                  <button
+                                    onClick={() => { setEditingJournalId(null); setEditingJournalContent(''); }}
+                                    className="px-3 py-1 text-sm bg-slate-600 hover:bg-slate-500 text-white rounded transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={saveJournalEdit}
+                                    disabled={!editingJournalContent.trim()}
+                                    className="px-3 py-1 text-sm bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 text-white rounded transition-colors"
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <p className="text-white whitespace-pre-wrap">{entry.content}</p>
+                                <div className="flex justify-between items-center mt-2">
+                                  <span className="text-slate-500 text-xs">
+                                    {entryDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                                    {entry.updatedAt !== entry.createdAt && ' (edited)'}
+                                  </span>
+                                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={() => { setEditingJournalId(entry.id); setEditingJournalContent(entry.content); }}
+                                      className="text-slate-400 hover:text-cyan-400 text-xs"
+                                      aria-label="Edit entry"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => setJournalDeleteConfirm(entry.id)}
+                                      className="text-slate-400 hover:text-red-400 text-xs"
+                                      aria-label="Delete entry"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+
+                  {journalHasMore && (
+                    <button
+                      onClick={() => loadJournalEntries(journalPage + 1)}
+                      disabled={journalLoading}
+                      className="w-full py-3 text-slate-400 hover:text-white text-sm transition-colors"
+                    >
+                      {journalLoading ? 'Loading...' : 'Load more'}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -1762,6 +2007,36 @@ const App = () => {
               </button>
               <button
                 onClick={() => deleteTask(deleteConfirm)}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Journal Delete Confirmation */}
+      {journalDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="bg-slate-800 rounded-lg p-6 max-w-sm mx-4 border border-slate-700"
+          >
+            <h3 className="text-white font-semibold mb-2">Delete Journal Entry</h3>
+            <p className="text-slate-300 mb-4">
+              Are you sure you want to delete this journal entry? This action cannot be undone.
+            </p>
+            <div className="flex space-x-2 justify-end">
+              <button
+                onClick={() => setJournalDeleteConfirm(null)}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteJournalEntry(journalDeleteConfirm)}
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
               >
                 Delete

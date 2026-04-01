@@ -164,8 +164,9 @@ const MAX_LENGTHS = [
     'board_name'  => 100,
     'task_title'  => 255,
     'title'       => 255,
-    'description' => 5000,
-    'color'       => 20,
+    'description'      => 5000,
+    'color'            => 20,
+    'journal_content'  => 5000,
 ];
 
 function enforceMaxLengths(array $data, array $fieldLimits): void {
