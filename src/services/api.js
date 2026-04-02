@@ -239,21 +239,21 @@ const api = {
   },
 
   // Journal endpoints
-  async getJournalEntries(boardId, page = 1) {
-    return this.request(`/journal.php?board_id=${boardId}&page=${page}`);
+  async getJournalEntries(page = 1) {
+    return this.request(`/journal.php?page=${page}`);
   },
 
-  async createJournalEntry(boardId, content) {
+  async createJournalEntry(content, tag = null) {
     return this.request('/journal.php', {
       method: 'POST',
-      body: JSON.stringify({ board_id: boardId, content }),
+      body: JSON.stringify({ content, tag }),
     });
   },
 
-  async updateJournalEntry(id, content) {
+  async updateJournalEntry(id, content, tag = null) {
     return this.request('/journal.php', {
       method: 'PUT',
-      body: JSON.stringify({ id, content }),
+      body: JSON.stringify({ id, content, tag }),
     });
   },
 

@@ -225,14 +225,19 @@ const App = () => {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [viewingTaskId, setViewingTaskId] = useState(null);
 
+  // View mode: 'board' or 'journal'
+  const [viewMode, setViewMode] = useState('board');
+
   // Journal state
   const [journalEntries, setJournalEntries] = useState([]);
   const [journalLoading, setJournalLoading] = useState(false);
   const [journalPage, setJournalPage] = useState(1);
   const [journalHasMore, setJournalHasMore] = useState(false);
   const [newJournalEntry, setNewJournalEntry] = useState('');
+  const [selectedJournalTag, setSelectedJournalTag] = useState(null);
   const [editingJournalId, setEditingJournalId] = useState(null);
   const [editingJournalContent, setEditingJournalContent] = useState('');
+  const [editingJournalTag, setEditingJournalTag] = useState(null);
   const [journalDeleteConfirm, setJournalDeleteConfirm] = useState(null);
 
   // Auto-load subtasks for all tasks when tasks change
@@ -381,6 +386,16 @@ const App = () => {
     setEditingBoard(null);
     setBoardMenuOpen(null);
     setSidebarOpen(false);
+
+    // Reset journal state
+    setViewMode('board');
+    setJournalEntries([]);
+    setJournalPage(1);
+    setJournalHasMore(false);
+    setNewJournalEntry('');
+    setSelectedJournalTag(null);
+    setEditingJournalId(null);
+    setJournalDeleteConfirm(null);
   };
 
   const handleSessionExpiry = () => {
@@ -731,22 +746,15 @@ const App = () => {
     if (boardId !== currentBoard) {
       setSubtasks({});
       setCurrentBoard(boardId);
-      // Reset journal state
-      setJournalEntries([]);
-      setJournalPage(1);
-      setJournalHasMore(false);
-      setNewJournalEntry('');
-      setEditingJournalId(null);
-      setJournalDeleteConfirm(null);
+      setViewMode('board');
     }
   };
 
   // Journal functions
   const loadJournalEntries = async (page = 1) => {
-    if (!currentBoard) return;
     setJournalLoading(true);
     try {
-      const data = await api.getJournalEntries(currentBoard, page);
+      const data = await api.getJournalEntries(page);
       if (page === 1) {
         setJournalEntries(data.entries);
       } else {
@@ -763,11 +771,12 @@ const App = () => {
 
   const addJournalEntry = async () => {
     const content = newJournalEntry.trim();
-    if (!content || !currentBoard) return;
+    if (!content) return;
     try {
-      const entry = await api.createJournalEntry(currentBoard, content);
+      const entry = await api.createJournalEntry(content, selectedJournalTag);
       setJournalEntries(prev => [entry, ...prev]);
       setNewJournalEntry('');
+      setSelectedJournalTag(null);
     } catch (err) {
       setError('Failed to add journal entry: ' + err.message);
     }
@@ -777,12 +786,13 @@ const App = () => {
     const content = editingJournalContent.trim();
     if (!content || !editingJournalId) return;
     try {
-      await api.updateJournalEntry(editingJournalId, content);
+      await api.updateJournalEntry(editingJournalId, content, editingJournalTag);
       setJournalEntries(prev => prev.map(e =>
-        e.id === editingJournalId ? { ...e, content, updatedAt: new Date().toISOString() } : e
+        e.id === editingJournalId ? { ...e, content, tag: editingJournalTag, updatedAt: new Date().toISOString() } : e
       ));
       setEditingJournalId(null);
       setEditingJournalContent('');
+      setEditingJournalTag(null);
     } catch (err) {
       setError('Failed to update journal entry: ' + err.message);
     }
@@ -798,25 +808,21 @@ const App = () => {
     }
   };
 
-  // Load journal entries when switching to journal tab
+  // Load journal entries when switching to journal view
   useEffect(() => {
-    if (activeTab === 'journal' && currentBoard && journalEntries.length === 0) {
+    if (viewMode === 'journal' && journalEntries.length === 0) {
       loadJournalEntries(1);
     }
-  }, [activeTab, currentBoard]);
+  }, [viewMode]);
 
   // ARIA tabs: arrow key navigation (Phase 3)
-  const tabOrder = ['active', 'completed', 'journal'];
   const handleTabKeyDown = (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
-      const currentIndex = tabOrder.indexOf(activeTab);
-      const nextIndex = e.key === 'ArrowRight'
-        ? (currentIndex + 1) % tabOrder.length
-        : (currentIndex - 1 + tabOrder.length) % tabOrder.length;
-      const next = tabOrder[nextIndex];
+      const next = activeTab === 'active' ? 'completed' : 'active';
       setActiveTab(next);
-      document.getElementById(`tab-${next}`)?.focus();
+      const tabId = next === 'active' ? 'tab-active' : 'tab-completed';
+      document.getElementById(tabId)?.focus();
     }
   };
 
@@ -1072,11 +1078,23 @@ const App = () => {
               <Icon name="menu" size={24} />
             </button>
             <img src="/SuperSix-Logo.png" alt="SuperSix" className="h-8" />
-            <UserHeader
-              user={user}
-              onLogout={handleLogout}
-              onOpenAuth={() => setShowAuthModal(true)}
-            />
+            <div className="flex items-center gap-2">
+              {user && (
+                <button
+                  onClick={() => { setViewMode(viewMode === 'journal' ? 'board' : 'journal'); }}
+                  className={`p-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                  aria-label="Toggle journal"
+                  aria-pressed={viewMode === 'journal'}
+                >
+                  <Icon name="book-open" size={18} />
+                </button>
+              )}
+              <UserHeader
+                user={user}
+                onLogout={handleLogout}
+                onOpenAuth={() => setShowAuthModal(true)}
+              />
+            </div>
           </div>
         )}
 
@@ -1089,7 +1107,18 @@ const App = () => {
                 {selectedHaiku}
               </p>
             </div>
-            <div className="absolute right-6 top-6">
+            <div className="absolute right-6 top-6 flex items-center gap-3">
+              {user && (
+                <button
+                  onClick={() => { setViewMode(viewMode === 'journal' ? 'board' : 'journal'); }}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                  aria-label="Toggle journal"
+                  aria-pressed={viewMode === 'journal'}
+                >
+                  <Icon name="book-open" size={16} />
+                  <span className="text-sm font-medium">Journal</span>
+                </button>
+              )}
               <UserHeader
                 user={user}
                 onLogout={handleLogout}
@@ -1125,6 +1154,8 @@ const App = () => {
         )}
 
         <div className="container mx-auto px-2 py-8 max-w-4xl overflow-x-hidden">
+          {viewMode === 'board' ? (
+          <>
           {/* Board Title for Mobile */}
           {windowWidth <= 1249 && (
             <div className="text-center mb-6">
@@ -1198,19 +1229,6 @@ const App = () => {
                 className={`px-6 py-2 rounded-md transition-all ${activeTab === 'completed' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
               >
                 Completed
-              </button>
-              <button
-                id="tab-journal"
-                role="tab"
-                aria-selected={activeTab === 'journal'}
-                aria-controls="tabpanel-journal"
-                tabIndex={activeTab === 'journal' ? 0 : -1}
-                onClick={() => setActiveTab('journal')}
-                onKeyDown={handleTabKeyDown}
-                className={`px-6 py-2 rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'journal' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
-              >
-                <Icon name="book-open" size={16} />
-                Journal
               </button>
             </div>
           </div>
@@ -1482,7 +1500,7 @@ const App = () => {
                 </div>
               </div>
             </div>
-          ) : activeTab === 'completed' ? (
+          ) : (
             /* Completed Tasks */
             <div
               id="tabpanel-completed"
@@ -1516,120 +1534,197 @@ const App = () => {
                 <p className="text-slate-500 italic text-center py-8">No completed tasks yet</p>
               )}
             </div>
+          )}
+          </>
           ) : (
-            /* Journal */
-            <div
-              id="tabpanel-journal"
-              role="tabpanel"
-              aria-labelledby="tab-journal"
-            >
-              {/* New entry input */}
-              <div className="bg-slate-800 rounded-lg p-4 border border-slate-700 mb-6">
-                <textarea
-                  value={newJournalEntry}
-                  onChange={(e) => setNewJournalEntry(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                      e.preventDefault();
-                      addJournalEntry();
-                    }
-                  }}
-                  placeholder="What's on your mind?"
-                  rows={3}
-                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 resize-none mb-3"
-                  aria-label="New journal entry"
-                />
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-500 text-xs">Ctrl+Enter to submit</span>
+          /* Global Journal View */
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
+                <Icon name="book-open" size={24} />
+                Journal
+              </h2>
+              <button
+                onClick={() => setViewMode('board')}
+                className="text-slate-400 hover:text-white text-sm transition-colors"
+              >
+                Back to board
+              </button>
+            </div>
+
+            {/* New entry input */}
+            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700 mb-6">
+              <textarea
+                value={newJournalEntry}
+                onChange={(e) => setNewJournalEntry(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    addJournalEntry();
+                  }
+                }}
+                placeholder="What's on your mind?"
+                rows={3}
+                className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 resize-none mb-3"
+                aria-label="New journal entry"
+              />
+              {/* Tag selector */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {[
+                  { value: 'blocker', label: 'Blocker', color: 'red' },
+                  { value: 'win', label: 'Win', color: 'green' },
+                  { value: 'idea', label: 'Idea', color: 'yellow' },
+                  { value: 'reflection', label: 'Reflection', color: 'blue' },
+                ].map(({ value, label, color }) => (
                   <button
-                    onClick={addJournalEntry}
-                    disabled={!newJournalEntry.trim()}
-                    className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors"
+                    key={value}
+                    onClick={() => setSelectedJournalTag(selectedJournalTag === value ? null : value)}
+                    className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                      selectedJournalTag === value
+                        ? `bg-${color}-500/20 border-${color}-500/50 text-${color}-300`
+                        : 'border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+                    }`}
                   >
-                    Add Entry
+                    {label}
                   </button>
-                </div>
+                ))}
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 text-xs">Ctrl+Enter to submit</span>
+                <button
+                  onClick={addJournalEntry}
+                  disabled={!newJournalEntry.trim()}
+                  className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors"
+                >
+                  Add Entry
+                </button>
+              </div>
+            </div>
 
-              {/* Entries feed */}
-              {journalLoading && journalEntries.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">Loading entries...</p>
-              ) : journalEntries.length === 0 ? (
-                <p className="text-slate-500 italic text-center py-8">No journal entries yet. Write your first one above!</p>
-              ) : (
-                <div className="space-y-2">
-                  {(() => {
-                    let lastDateLabel = '';
-                    return journalEntries.map((entry) => {
-                      const entryDate = new Date(entry.createdAt);
-                      const today = new Date();
-                      const yesterday = new Date();
-                      yesterday.setDate(yesterday.getDate() - 1);
+            {/* Entries feed */}
+            {journalLoading && journalEntries.length === 0 ? (
+              <p className="text-slate-500 text-center py-8">Loading entries...</p>
+            ) : journalEntries.length === 0 ? (
+              <p className="text-slate-500 italic text-center py-8">No journal entries yet. Write your first one above!</p>
+            ) : (
+              <div className="space-y-2">
+                {(() => {
+                  let lastDateLabel = '';
+                  return journalEntries.map((entry) => {
+                    const entryDate = new Date(entry.createdAt);
+                    const today = new Date();
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
 
-                      let dateLabel;
-                      if (entryDate.toDateString() === today.toDateString()) {
-                        dateLabel = 'Today';
-                      } else if (entryDate.toDateString() === yesterday.toDateString()) {
-                        dateLabel = 'Yesterday';
-                      } else {
-                        dateLabel = entryDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-                      }
+                    let dateLabel;
+                    if (entryDate.toDateString() === today.toDateString()) {
+                      dateLabel = 'Today';
+                    } else if (entryDate.toDateString() === yesterday.toDateString()) {
+                      dateLabel = 'Yesterday';
+                    } else {
+                      dateLabel = entryDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                    }
 
-                      const showHeader = dateLabel !== lastDateLabel;
-                      lastDateLabel = dateLabel;
+                    const showHeader = dateLabel !== lastDateLabel;
+                    lastDateLabel = dateLabel;
 
-                      return (
-                        <div key={entry.id}>
-                          {showHeader && (
-                            <h3 className="text-slate-400 text-sm font-medium mt-4 mb-2 first:mt-0">{dateLabel}</h3>
-                          )}
-                          <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700 group">
-                            {editingJournalId === entry.id ? (
-                              <div>
-                                <textarea
-                                  value={editingJournalContent}
-                                  onChange={(e) => setEditingJournalContent(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                                      e.preventDefault();
-                                      saveJournalEdit();
-                                    }
-                                    if (e.key === 'Escape') {
-                                      setEditingJournalId(null);
-                                      setEditingJournalContent('');
-                                    }
-                                  }}
-                                  rows={3}
-                                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400 resize-none mb-2"
-                                  autoFocus
-                                />
-                                <div className="flex gap-2 justify-end">
+                    const isAuto = entry.entryType === 'auto';
+                    const tagColors = { blocker: 'red', win: 'green', idea: 'yellow', reflection: 'blue' };
+
+                    return (
+                      <div key={entry.id}>
+                        {showHeader && (
+                          <h3 className="text-slate-400 text-sm font-medium mt-4 mb-2 first:mt-0">{dateLabel}</h3>
+                        )}
+                        <div className={`rounded-lg p-4 border group ${isAuto ? 'bg-slate-800/30 border-slate-700/50' : 'bg-slate-800/50 border-slate-700'}`}>
+                          {editingJournalId === entry.id ? (
+                            <div>
+                              <textarea
+                                value={editingJournalContent}
+                                onChange={(e) => setEditingJournalContent(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                    e.preventDefault();
+                                    saveJournalEdit();
+                                  }
+                                  if (e.key === 'Escape') {
+                                    setEditingJournalId(null);
+                                    setEditingJournalContent('');
+                                    setEditingJournalTag(null);
+                                  }
+                                }}
+                                rows={3}
+                                className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400 resize-none mb-2"
+                                autoFocus
+                              />
+                              {/* Edit tag selector */}
+                              <div className="flex flex-wrap gap-2 mb-2">
+                                {[
+                                  { value: 'blocker', label: 'Blocker', color: 'red' },
+                                  { value: 'win', label: 'Win', color: 'green' },
+                                  { value: 'idea', label: 'Idea', color: 'yellow' },
+                                  { value: 'reflection', label: 'Reflection', color: 'blue' },
+                                ].map(({ value, label, color }) => (
                                   <button
-                                    onClick={() => { setEditingJournalId(null); setEditingJournalContent(''); }}
-                                    className="px-3 py-1 text-sm bg-slate-600 hover:bg-slate-500 text-white rounded transition-colors"
+                                    key={value}
+                                    onClick={() => setEditingJournalTag(editingJournalTag === value ? null : value)}
+                                    className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                                      editingJournalTag === value
+                                        ? `bg-${color}-500/20 border-${color}-500/50 text-${color}-300`
+                                        : 'border-slate-600 text-slate-400 hover:border-slate-500'
+                                    }`}
                                   >
-                                    Cancel
+                                    {label}
                                   </button>
-                                  <button
-                                    onClick={saveJournalEdit}
-                                    disabled={!editingJournalContent.trim()}
-                                    className="px-3 py-1 text-sm bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 text-white rounded transition-colors"
-                                  >
-                                    Save
-                                  </button>
+                                ))}
+                              </div>
+                              <div className="flex gap-2 justify-end">
+                                <button
+                                  onClick={() => { setEditingJournalId(null); setEditingJournalContent(''); setEditingJournalTag(null); }}
+                                  className="px-3 py-1 text-sm bg-slate-600 hover:bg-slate-500 text-white rounded transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={saveJournalEdit}
+                                  disabled={!editingJournalContent.trim()}
+                                  className="px-3 py-1 text-sm bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 text-white rounded transition-colors"
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <div className="flex items-start gap-2">
+                                {isAuto && (
+                                  <span className="text-slate-500 mt-0.5 flex-shrink-0">
+                                    <Icon name="clock" size={14} />
+                                  </span>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  {entry.tag && (
+                                    <span className={`inline-block px-2 py-0.5 text-xs rounded-full mb-1.5 bg-${tagColors[entry.tag]}-500/20 text-${tagColors[entry.tag]}-300 border border-${tagColors[entry.tag]}-500/30`}>
+                                      {entry.tag}
+                                    </span>
+                                  )}
+                                  <p className={`whitespace-pre-wrap ${isAuto ? 'text-slate-400 text-sm' : 'text-white'}`}>{entry.content}</p>
+                                  {isAuto && entry.boardName && (
+                                    <span className="inline-block mt-1.5 px-2 py-0.5 text-xs rounded bg-slate-700/50 text-slate-500">
+                                      {entry.boardName}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                            ) : (
-                              <div>
-                                <p className="text-white whitespace-pre-wrap">{entry.content}</p>
-                                <div className="flex justify-between items-center mt-2">
-                                  <span className="text-slate-500 text-xs">
-                                    {entryDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                                    {entry.updatedAt !== entry.createdAt && ' (edited)'}
-                                  </span>
+                              <div className="flex justify-between items-center mt-2">
+                                <span className="text-slate-500 text-xs">
+                                  {entryDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                                  {!isAuto && entry.updatedAt !== entry.createdAt && ' (edited)'}
+                                </span>
+                                {!isAuto && (
                                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
-                                      onClick={() => { setEditingJournalId(entry.id); setEditingJournalContent(entry.content); }}
+                                      onClick={() => { setEditingJournalId(entry.id); setEditingJournalContent(entry.content); setEditingJournalTag(entry.tag); }}
                                       className="text-slate-400 hover:text-cyan-400 text-xs"
                                       aria-label="Edit entry"
                                     >
@@ -1643,27 +1738,28 @@ const App = () => {
                                       Delete
                                     </button>
                                   </div>
-                                </div>
+                                )}
                               </div>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
-                      );
-                    });
-                  })()}
+                      </div>
+                    );
+                  });
+                })()}
 
-                  {journalHasMore && (
-                    <button
-                      onClick={() => loadJournalEntries(journalPage + 1)}
-                      disabled={journalLoading}
-                      className="w-full py-3 text-slate-400 hover:text-white text-sm transition-colors"
-                    >
-                      {journalLoading ? 'Loading...' : 'Load more'}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+                {journalHasMore && (
+                  <button
+                    onClick={() => loadJournalEntries(journalPage + 1)}
+                    disabled={journalLoading}
+                    className="w-full py-3 text-slate-400 hover:text-white text-sm transition-colors"
+                  >
+                    {journalLoading ? 'Loading...' : 'Load more'}
+                  </button>
+                )}
+              </div>
+            )}
+          </>
           )}
         </div>
       </div>

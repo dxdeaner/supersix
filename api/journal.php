@@ -1,5 +1,5 @@
 <?php
-// journal.php - Journal Entries API with User Authentication
+// journal.php - Journal Entries API (Global Profile-Level)
 require_once 'config.php';
 
 // Start secure session
@@ -36,18 +36,6 @@ function getEntries($pdo) {
         sendResponse(['error' => 'Authentication required'], 401);
     }
     $userId = $_SESSION['user_id'];
-    $boardId = $_GET['board_id'] ?? null;
-
-    if (!$boardId) {
-        sendResponse(['error' => 'board_id is required'], 400);
-    }
-
-    // Verify board ownership
-    $stmt = $pdo->prepare("SELECT id FROM boards WHERE id = ? AND user_id = ? AND archived = FALSE");
-    $stmt->execute([$boardId, $userId]);
-    if (!$stmt->fetch()) {
-        sendResponse(['error' => 'Board not found or access denied'], 404);
-    }
 
     try {
         $page = max(1, (int)($_GET['page'] ?? 1));
@@ -55,13 +43,13 @@ function getEntries($pdo) {
         $offset = ($page - 1) * $perPage;
 
         $stmt = $pdo->prepare("
-            SELECT id, content, created_at, updated_at
+            SELECT id, entry_type, tag, auto_type, content, board_id, board_name, task_id, task_title, created_at, updated_at
             FROM journal_entries
-            WHERE board_id = ? AND user_id = ?
+            WHERE user_id = ?
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
         ");
-        $stmt->execute([$boardId, $userId, $perPage + 1, $offset]);
+        $stmt->execute([$userId, $perPage + 1, $offset]);
         $entries = $stmt->fetchAll();
 
         $hasMore = count($entries) > $perPage;
@@ -72,7 +60,14 @@ function getEntries($pdo) {
         $formatted = array_map(function($entry) {
             return [
                 'id' => (int)$entry['id'],
+                'entryType' => $entry['entry_type'],
+                'tag' => $entry['tag'],
+                'autoType' => $entry['auto_type'],
                 'content' => $entry['content'],
+                'boardId' => $entry['board_id'] ? (int)$entry['board_id'] : null,
+                'boardName' => $entry['board_name'],
+                'taskId' => $entry['task_id'] ? (int)$entry['task_id'] : null,
+                'taskTitle' => $entry['task_title'],
                 'createdAt' => $entry['created_at'],
                 'updatedAt' => $entry['updated_at'],
             ];
@@ -91,37 +86,42 @@ function createEntry($pdo) {
     }
     $userId = $_SESSION['user_id'];
     $data = getJsonInput();
-    validateRequired($data, ['board_id', 'content']);
+    validateRequired($data, ['content']);
 
     enforceMaxLengths($data, [
         'content' => MAX_LENGTHS['journal_content'],
     ]);
 
-    $boardId = $data['board_id'];
-
-    // Verify board ownership
-    $stmt = $pdo->prepare("SELECT id FROM boards WHERE id = ? AND user_id = ? AND archived = FALSE");
-    $stmt->execute([$boardId, $userId]);
-    if (!$stmt->fetch()) {
-        sendResponse(['error' => 'Board not found or access denied'], 404);
-    }
+    // Validate tag if provided
+    $allowedTags = ['blocker', 'win', 'idea', 'reflection'];
+    $tag = isset($data['tag']) && in_array($data['tag'], $allowedTags, true) ? $data['tag'] : null;
 
     try {
         $stmt = $pdo->prepare("
-            INSERT INTO journal_entries (board_id, user_id, content)
-            VALUES (?, ?, ?)
+            INSERT INTO journal_entries (user_id, entry_type, tag, content)
+            VALUES (?, 'manual', ?, ?)
         ");
-        $stmt->execute([$boardId, $userId, trim($data['content'])]);
+        $stmt->execute([$userId, $tag, trim($data['content'])]);
 
         $entryId = $pdo->lastInsertId();
 
-        $stmt = $pdo->prepare("SELECT id, content, created_at, updated_at FROM journal_entries WHERE id = ?");
+        $stmt = $pdo->prepare("
+            SELECT id, entry_type, tag, auto_type, content, board_id, board_name, task_id, task_title, created_at, updated_at
+            FROM journal_entries WHERE id = ?
+        ");
         $stmt->execute([$entryId]);
         $entry = $stmt->fetch();
 
         sendResponse([
             'id' => (int)$entry['id'],
+            'entryType' => $entry['entry_type'],
+            'tag' => $entry['tag'],
+            'autoType' => $entry['auto_type'],
             'content' => $entry['content'],
+            'boardId' => $entry['board_id'] ? (int)$entry['board_id'] : null,
+            'boardName' => $entry['board_name'],
+            'taskId' => $entry['task_id'] ? (int)$entry['task_id'] : null,
+            'taskTitle' => $entry['task_title'],
             'createdAt' => $entry['created_at'],
             'updatedAt' => $entry['updated_at'],
         ], 201);
@@ -143,16 +143,21 @@ function updateEntry($pdo) {
         'content' => MAX_LENGTHS['journal_content'],
     ]);
 
+    // Validate tag if provided
+    $allowedTags = ['blocker', 'win', 'idea', 'reflection'];
+    $tag = isset($data['tag']) && in_array($data['tag'], $allowedTags, true) ? $data['tag'] : null;
+
     try {
+        // Only allow editing manual entries
         $stmt = $pdo->prepare("
             UPDATE journal_entries
-            SET content = ?
-            WHERE id = ? AND user_id = ?
+            SET content = ?, tag = ?
+            WHERE id = ? AND user_id = ? AND entry_type = 'manual'
         ");
-        $stmt->execute([trim($data['content']), $data['id'], $userId]);
+        $stmt->execute([trim($data['content']), $tag, $data['id'], $userId]);
 
         if ($stmt->rowCount() === 0) {
-            sendResponse(['error' => 'Entry not found or access denied'], 404);
+            sendResponse(['error' => 'Entry not found, access denied, or cannot edit auto-log entries'], 404);
         }
 
         sendResponse(['message' => 'Entry updated successfully']);
@@ -174,14 +179,15 @@ function deleteEntry($pdo) {
     }
 
     try {
+        // Only allow deleting manual entries
         $stmt = $pdo->prepare("
             DELETE FROM journal_entries
-            WHERE id = ? AND user_id = ?
+            WHERE id = ? AND user_id = ? AND entry_type = 'manual'
         ");
         $stmt->execute([$entryId, $userId]);
 
         if ($stmt->rowCount() === 0) {
-            sendResponse(['error' => 'Entry not found or access denied'], 404);
+            sendResponse(['error' => 'Entry not found, access denied, or cannot delete auto-log entries'], 404);
         }
 
         sendResponse(['message' => 'Entry deleted successfully']);

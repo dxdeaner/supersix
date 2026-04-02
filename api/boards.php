@@ -1,6 +1,7 @@
 <?php
 // boards.php - Board Management API with User Authentication
 require_once 'config.php';
+require_once __DIR__ . '/journal_helper.php';
 
 // Start secure session
 startSecureSession();
@@ -102,7 +103,12 @@ function createBoard($pdo) {
         ]);
         
         $boardId = $pdo->lastInsertId();
-        
+
+        // Auto-log: board created
+        insertJournalAutoLog($pdo, $userId, 'board_created',
+            'Created board "' . trim($data['name']) . '"',
+            (int)$boardId, trim($data['name']));
+
         // Create sample task for new board
         $taskStmt = $pdo->prepare("
             INSERT INTO tasks (board_id, title, description, status, position) 
@@ -212,11 +218,19 @@ function deleteBoard($pdo) {
         ");
         
         $result = $stmt->execute([$boardId, $userId]);
-        
+
         if ($stmt->rowCount() === 0) {
             sendResponse(['error' => 'Board not found or access denied'], 404);
         }
-        
+
+        // Auto-log: board archived
+        $nameStmt = $pdo->prepare("SELECT name FROM boards WHERE id = ?");
+        $nameStmt->execute([$boardId]);
+        $boardRow = $nameStmt->fetch();
+        insertJournalAutoLog($pdo, $userId, 'board_archived',
+            'Archived board "' . $boardRow['name'] . '"',
+            (int)$boardId, $boardRow['name']);
+
         sendResponse(['message' => 'Board archived successfully']);
     } catch (PDOException $e) {
         error_log("Delete board error: " . $e->getMessage());

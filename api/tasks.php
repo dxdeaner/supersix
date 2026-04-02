@@ -1,6 +1,7 @@
 <?php
 // tasks.php - Task Management API with User Authentication
 require_once 'config.php';
+require_once __DIR__ . '/journal_helper.php';
 
 // Start secure session
 startSecureSession();
@@ -158,7 +159,15 @@ function createTask($pdo) {
         ]);
         
         $taskId = $pdo->lastInsertId();
-        
+
+        // Auto-log: task created
+        $boardStmt = $pdo->prepare("SELECT name FROM boards WHERE id = ?");
+        $boardStmt->execute([$data['board_id']]);
+        $boardRow = $boardStmt->fetch();
+        insertJournalAutoLog($pdo, $userId, 'task_created',
+            'Created task "' . trim($data['title']) . '" on ' . $boardRow['name'],
+            (int)$data['board_id'], $boardRow['name'], (int)$taskId, trim($data['title']));
+
         // Return the new task
         $stmt = $pdo->prepare("SELECT * FROM tasks WHERE id = ?");
         $stmt->execute([$taskId]);
@@ -331,7 +340,15 @@ function completeTask($pdo) {
             // Promote first queued task
             promoteQueuedTask($pdo, $task['board_id']);
         }
-        
+
+        // Auto-log: task completed
+        $infoStmt = $pdo->prepare("SELECT t.title, b.name as board_name FROM tasks t JOIN boards b ON t.board_id = b.id WHERE t.id = ?");
+        $infoStmt->execute([$data['id']]);
+        $info = $infoStmt->fetch();
+        insertJournalAutoLog($pdo, $userId, 'task_completed',
+            'Completed task "' . $info['title'] . '" on ' . $info['board_name'],
+            (int)$task['board_id'], $info['board_name'], (int)$data['id'], $info['title']);
+
         $pdo->commit();
         sendResponse(['message' => 'Task completed successfully']);
     } catch (PDOException $e) {
@@ -422,6 +439,14 @@ function promoteTask($pdo) {
             $stmt->execute([$data['id']]);
         }
         
+        // Auto-log: task promoted
+        $infoStmt = $pdo->prepare("SELECT t.title, b.name as board_name FROM tasks t JOIN boards b ON t.board_id = b.id WHERE t.id = ?");
+        $infoStmt->execute([$data['id']]);
+        $info = $infoStmt->fetch();
+        insertJournalAutoLog($pdo, $userId, 'task_promoted',
+            'Promoted "' . $info['title'] . '" to active on ' . $info['board_name'],
+            (int)$task['board_id'], $info['board_name'], (int)$data['id'], $info['title']);
+
         $pdo->commit();
         sendResponse(['message' => 'Task promoted successfully']);
     } catch (PDOException $e) {

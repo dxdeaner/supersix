@@ -1,6 +1,7 @@
 <?php
 // subtasks.php - Subtask Management API
 require_once 'config.php';
+require_once __DIR__ . '/journal_helper.php';
 
 // Start secure session
 startSecureSession();
@@ -197,7 +198,21 @@ function toggleSubtask($pdo) {
             ");
         }
         $stmt->execute([$data['id']]);
-        
+
+        // Auto-log: subtask completed (only when toggling ON)
+        if ($newCompleted) {
+            $infoStmt = $pdo->prepare("
+                SELECT s.title as subtask_title, t.id as task_id, t.title as task_title, b.id as board_id, b.name as board_name
+                FROM subtasks s JOIN tasks t ON s.task_id = t.id JOIN boards b ON t.board_id = b.id
+                WHERE s.id = ?
+            ");
+            $infoStmt->execute([$data['id']]);
+            $info = $infoStmt->fetch();
+            insertJournalAutoLog($pdo, $userId, 'subtask_completed',
+                'Completed subtask "' . $info['subtask_title'] . '" on "' . $info['task_title'] . '"',
+                (int)$info['board_id'], $info['board_name'], (int)$info['task_id'], $info['task_title']);
+        }
+
         sendResponse(['message' => 'Subtask updated successfully']);
     } catch (PDOException $e) {
         error_log("Toggle subtask error: " . $e->getMessage());
