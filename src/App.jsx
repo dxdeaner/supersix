@@ -808,9 +808,9 @@ const App = () => {
     }
   };
 
-  // Load journal entries when switching to journal view
+  // Load/refresh journal entries when switching to journal view
   useEffect(() => {
-    if (viewMode === 'journal' && journalEntries.length === 0) {
+    if (viewMode === 'journal') {
       loadJournalEntries(1);
     }
   }, [viewMode]);
@@ -1607,7 +1607,7 @@ const App = () => {
             ) : journalEntries.length === 0 ? (
               <p className="text-slate-500 italic text-center py-8">No journal entries yet. Write your first one above!</p>
             ) : (
-              <div className="space-y-2">
+              <div className="divide-y divide-slate-700/50">
                 {(() => {
                   let lastDateLabel = '';
                   return journalEntries.map((entry) => {
@@ -1634,9 +1634,9 @@ const App = () => {
                     return (
                       <div key={entry.id}>
                         {showHeader && (
-                          <h3 className="text-slate-400 text-sm font-medium mt-4 mb-2 first:mt-0">{dateLabel}</h3>
+                          <h3 className="text-slate-400 text-sm font-medium mt-4 mb-1 first:mt-0">{dateLabel}</h3>
                         )}
-                        <div className={`rounded-lg p-4 border group ${isAuto ? 'bg-slate-800/30 border-slate-700/50' : 'bg-slate-800/50 border-slate-700'}`}>
+                        <div className="py-1.5 px-2 rounded group hover:bg-slate-800/40 transition-colors">
                           {editingJournalId === entry.id ? (
                             <div>
                               <textarea
@@ -1657,7 +1657,6 @@ const App = () => {
                                 className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400 resize-none mb-2"
                                 autoFocus
                               />
-                              {/* Edit tag selector */}
                               <div className="flex flex-wrap gap-2 mb-2">
                                 {[
                                   { value: 'blocker', label: 'Blocker', color: 'red' },
@@ -1695,51 +1694,49 @@ const App = () => {
                               </div>
                             </div>
                           ) : (
-                            <div>
-                              <div className="flex items-start gap-2">
-                                {isAuto && (
-                                  <span className="text-slate-500 mt-0.5 flex-shrink-0">
-                                    <Icon name="clock" size={14} />
-                                  </span>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  {entry.tag && (
-                                    <span className={`inline-block px-2 py-0.5 text-xs rounded-full mb-1.5 bg-${tagColors[entry.tag]}-500/20 text-${tagColors[entry.tag]}-300 border border-${tagColors[entry.tag]}-500/30`}>
-                                      {entry.tag}
-                                    </span>
-                                  )}
-                                  <p className={`whitespace-pre-wrap ${isAuto ? 'text-slate-400 text-sm' : 'text-white'}`}>{entry.content}</p>
-                                  {isAuto && entry.boardName && (
-                                    <span className="inline-block mt-1.5 px-2 py-0.5 text-xs rounded bg-slate-700/50 text-slate-500">
-                                      {entry.boardName}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex justify-between items-center mt-2">
-                                <span className="text-slate-500 text-xs">
-                                  {entryDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                                  {!isAuto && entry.updatedAt !== entry.createdAt && ' (edited)'}
+                            <div className="flex items-center gap-2 text-sm min-w-0">
+                              <span className="text-slate-500 text-xs flex-shrink-0 w-16 text-right">
+                                {entryDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                              </span>
+                              {isAuto && (
+                                <span className="text-slate-500 flex-shrink-0">
+                                  <Icon name="clock" size={12} />
                                 </span>
-                                {!isAuto && (
-                                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                      onClick={() => { setEditingJournalId(entry.id); setEditingJournalContent(entry.content); setEditingJournalTag(entry.tag); }}
-                                      className="text-slate-400 hover:text-cyan-400 text-xs"
-                                      aria-label="Edit entry"
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      onClick={() => setJournalDeleteConfirm(entry.id)}
-                                      className="text-slate-400 hover:text-red-400 text-xs"
-                                      aria-label="Delete entry"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                              )}
+                              {entry.tag && (
+                                <span className={`flex-shrink-0 px-1.5 py-0 text-xs rounded-full bg-${tagColors[entry.tag]}-500/20 text-${tagColors[entry.tag]}-300`}>
+                                  {entry.tag}
+                                </span>
+                              )}
+                              <span className={`truncate flex-1 min-w-0 ${isAuto ? 'text-slate-400' : 'text-slate-200'}`} title={entry.content}>
+                                {entry.content}
+                              </span>
+                              {isAuto && entry.boardName && (
+                                <span className="text-slate-500 text-xs flex-shrink-0">
+                                  · {entry.boardName}
+                                </span>
+                              )}
+                              {!isAuto && entry.updatedAt !== entry.createdAt && (
+                                <span className="text-slate-600 text-xs flex-shrink-0">edited</span>
+                              )}
+                              {!isAuto && (
+                                <div className="flex gap-1.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={() => { setEditingJournalId(entry.id); setEditingJournalContent(entry.content); setEditingJournalTag(entry.tag); }}
+                                    className="text-slate-400 hover:text-cyan-400 text-xs"
+                                    aria-label="Edit entry"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => setJournalDeleteConfirm(entry.id)}
+                                    className="text-slate-400 hover:text-red-400 text-xs"
+                                    aria-label="Delete entry"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
