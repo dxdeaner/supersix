@@ -704,6 +704,19 @@ const App = () => {
     editTask(id);
   };
 
+  const updateTaskDueDate = async (taskId, newDueDate) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const prevTasks = [...tasks];
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, dueDate: newDueDate || null } : t));
+    try {
+      await api.updateTask(taskId, task.title, task.description || '', newDueDate || null);
+    } catch (err) {
+      setTasks(prevTasks);
+      setError('Failed to update due date: ' + err.message);
+    }
+  };
+
   const saveEdit = withOptimistic(
     async () => {
       await api.updateTask(
@@ -1440,6 +1453,7 @@ const App = () => {
                         onDrop={handleDrop}
                         isDragOver={dragOverIndex === slotIndex}
                         subtasks={subtasks}
+                        onUpdateDueDate={updateTaskDueDate}
                       />
                     ) : (
                       <div

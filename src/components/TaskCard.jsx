@@ -14,8 +14,19 @@ const CONFETTI_PIECES = Array.from({ length: 12 }, (_, i) => {
   };
 });
 
-const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks }) => {
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const hour = Math.floor(i / 2);
+  const minute = (i % 2) * 30;
+  const value = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  const label = `${hour === 0 ? 12 : hour > 12 ? hour - 12 : hour}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+  return { value, label };
+});
+
+const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks, onUpdateDueDate }) => {
   const [expanded, setExpanded] = useState(false);
+  const [editingDueDate, setEditingDueDate] = useState(false);
+  const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('09:00');
 
   const handleDragStart = (e) => {
     e.dataTransfer.setData('text/plain', '');
@@ -119,14 +130,61 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
                 </button>
               )}
             </div>
-            {task.dueDate && (
-              <div className="flex items-center space-x-1">
+            {task.dueDate && !editingDueDate && (
+              <div
+                className="flex items-center space-x-1 group/due cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const d = new Date(task.dueDate);
+                  setDueDate(d.toISOString().split('T')[0]);
+                  setDueTime(d.toISOString().slice(11, 16));
+                  setEditingDueDate(true);
+                }}
+                title="Click to edit due date"
+              >
                 {new Date(task.dueDate) < new Date() && (
                   <span className="text-red-400 font-bold text-sm" aria-label="Overdue" role="img">!</span>
                 )}
-                <div className={`${new Date(task.dueDate) < new Date() ? 'bg-red-500' : 'bg-orange-500'} text-white px-2 py-1 rounded-full text-xs font-medium`}>
-                  {new Date(task.dueDate).toLocaleString()}
+                <div className={`${new Date(task.dueDate) < new Date() ? 'bg-red-500' : 'bg-orange-500'} text-white px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1`}>
+                  <span>{new Date(task.dueDate).toLocaleString()}</span>
+                  <Icon name="edit-3" size={10} className="opacity-0 group-hover/due:opacity-100 transition-opacity" />
                 </div>
+              </div>
+            )}
+            {editingDueDate && (
+              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="bg-slate-700 border border-slate-600 rounded px-1.5 py-0.5 text-white text-xs focus:outline-none focus:border-cyan-400"
+                />
+                <select
+                  value={dueTime}
+                  onChange={(e) => setDueTime(e.target.value)}
+                  className="bg-slate-700 border border-slate-600 rounded px-1 py-0.5 text-white text-xs focus:outline-none focus:border-cyan-400"
+                >
+                  {TIME_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => {
+                    if (dueDate && onUpdateDueDate) {
+                      onUpdateDueDate(task.id, `${dueDate}T${dueTime}`);
+                    }
+                    setEditingDueDate(false);
+                  }}
+                  className="bg-cyan-600 hover:bg-cyan-700 text-white px-1.5 py-0.5 rounded text-xs transition-colors"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditingDueDate(false)}
+                  className="bg-slate-600 hover:bg-slate-500 text-white px-1.5 py-0.5 rounded text-xs transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             )}
           </div>
