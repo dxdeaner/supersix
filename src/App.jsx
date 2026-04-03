@@ -1096,7 +1096,7 @@ const App = () => {
       )}
 
       {/* Main Content */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0">
         {/* Visually-hidden h1 for screen readers (Phase 3) */}
         <h1 className="sr-only">SuperSix Task Manager</h1>
 
@@ -1626,11 +1626,11 @@ const App = () => {
                     const isAuto = entry.entryType === 'auto';
 
                     return (
-                      <div key={entry.id}>
+                      <div key={entry.id} className="overflow-hidden">
                         {showHeader && (
                           <h3 className="text-slate-400 text-sm font-medium mt-4 mb-1 first:mt-0">{dateLabel}</h3>
                         )}
-                        <div className="py-1.5 px-2 rounded group hover:bg-slate-800/40 transition-colors overflow-hidden">
+                        <div className="py-1.5 px-2 rounded group hover:bg-slate-800/40 transition-colors">
                           {editingJournalId === entry.id ? (
                             <div>
                               <textarea
@@ -1688,7 +1688,7 @@ const App = () => {
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1.5 sm:gap-2 text-sm max-w-full">
+                            <div className="flex items-center gap-1.5 sm:gap-2 text-sm w-full overflow-hidden">
                               <span className="text-slate-500 text-xs shrink-0">
                                 {entryDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                               </span>
