@@ -1572,7 +1572,7 @@ const App = () => {
           </>
           ) : (
           /* Global Journal View — Chat-style layout */
-          <>
+          <div className="w-full min-w-0 overflow-hidden">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
                 <Icon name="book-open" size={24} />
@@ -1630,7 +1630,7 @@ const App = () => {
                         {showHeader && (
                           <h3 className="text-slate-400 text-sm font-medium mt-4 mb-1 first:mt-0">{dateLabel}</h3>
                         )}
-                        <div className="py-1.5 px-2 rounded group hover:bg-slate-800/40 transition-colors">
+                        <div className="py-1.5 px-2 rounded group hover:bg-slate-800/40 transition-colors overflow-hidden">
                           {editingJournalId === entry.id ? (
                             <div>
                               <textarea
@@ -1688,33 +1688,33 @@ const App = () => {
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1.5 sm:gap-2 text-sm min-w-0 overflow-hidden">
-                              <span className="text-slate-500 text-xs flex-shrink-0 w-12 sm:w-16 text-right">
+                            <div className="flex items-center gap-1.5 sm:gap-2 text-sm max-w-full">
+                              <span className="text-slate-500 text-xs shrink-0">
                                 {entryDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                               </span>
                               {isAuto && (
-                                <span className="text-slate-500 flex-shrink-0">
+                                <span className="text-slate-500 shrink-0">
                                   <Icon name="clock" size={12} />
                                 </span>
                               )}
                               {entry.tag && (
-                                <span className={`flex-shrink-0 px-1.5 py-0 text-xs rounded-full ${tagStyles[entry.tag]?.pill || ''}`}>
+                                <span className={`shrink-0 px-1.5 py-0 text-xs rounded-full ${tagStyles[entry.tag]?.pill || ''}`}>
                                   {entry.tag}
                                 </span>
                               )}
-                              <span className={`truncate flex-1 min-w-0 ${isAuto ? 'text-slate-400' : 'text-slate-200'}`} title={entry.content}>
+                              <span className={`truncate min-w-0 ${isAuto ? 'text-slate-400' : 'text-slate-200'}`} title={entry.content}>
                                 {entry.content}
                               </span>
                               {isAuto && entry.boardName && (
-                                <span className="text-slate-500 text-xs flex-shrink-0 hidden sm:inline">
+                                <span className="text-slate-500 text-xs shrink-0 hidden sm:inline">
                                   · {entry.boardName}
                                 </span>
                               )}
                               {!isAuto && entry.updatedAt !== entry.createdAt && (
-                                <span className="text-slate-600 text-xs flex-shrink-0 hidden sm:inline">edited</span>
+                                <span className="text-slate-600 text-xs shrink-0 hidden sm:inline">edited</span>
                               )}
                               {!isAuto && (
-                                <div className="flex gap-1.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button
                                     onClick={() => { setEditingJournalId(entry.id); setEditingJournalContent(entry.content); setEditingJournalTag(entry.tag); }}
                                     className="text-slate-400 hover:text-cyan-400 text-xs"
@@ -1791,7 +1791,7 @@ const App = () => {
                 <span className="text-slate-600 text-xs ml-auto self-center hidden sm:inline">Ctrl+Enter</span>
               </div>
             </div>
-          </>
+          </div>
           )}
         </div>
       </div>
