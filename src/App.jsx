@@ -775,7 +775,7 @@ const App = () => {
     if (!content) return;
     try {
       const entry = await api.createJournalEntry(content, selectedJournalTag);
-      setJournalEntries(prev => [...prev, entry]);
+      setJournalEntries(prev => [entry, ...prev]);
       setNewJournalEntry('');
       setSelectedJournalTag(null);
       journalScrollToBottom.current = true;
