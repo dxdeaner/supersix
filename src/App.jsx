@@ -1602,7 +1602,7 @@ const App = () => {
                     lastDateLabel = dateLabel;
 
                     const isAuto = entry.entryType === 'auto';
-                    const tagColors = { blocker: 'red', win: 'green', idea: 'yellow', reflection: 'blue' };
+                    const tagColors = { blocker: 'red', win: 'emerald', idea: 'yellow', reflection: 'blue' };
 
                     return (
                       <div key={entry.id}>
@@ -1633,7 +1633,7 @@ const App = () => {
                               <div className="flex flex-wrap gap-2 mb-2">
                                 {[
                                   { value: 'blocker', label: 'Blocker', color: 'red' },
-                                  { value: 'win', label: 'Win', color: 'green' },
+                                  { value: 'win', label: 'Win', color: 'emerald' },
                                   { value: 'idea', label: 'Idea', color: 'yellow' },
                                   { value: 'reflection', label: 'Reflection', color: 'blue' },
                                 ].map(({ value, label, color }) => (
@@ -1751,7 +1751,7 @@ const App = () => {
               <div className="flex flex-wrap gap-2 mt-2">
                 {[
                   { value: 'blocker', label: 'Blocker', color: 'red' },
-                  { value: 'win', label: 'Win', color: 'green' },
+                  { value: 'win', label: 'Win', color: 'emerald' },
                   { value: 'idea', label: 'Idea', color: 'yellow' },
                   { value: 'reflection', label: 'Reflection', color: 'blue' },
                 ].map(({ value, label, color }) => (
