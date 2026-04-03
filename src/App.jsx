@@ -903,6 +903,14 @@ const App = () => {
     );
   }
 
+  // Journal tag styles (full class names for Tailwind detection)
+  const tagStyles = {
+    blocker: { pill: 'bg-red-500/20 text-red-300', active: 'bg-red-500/20 border-red-500/50 text-red-300' },
+    win: { pill: 'bg-emerald-500/20 text-emerald-300', active: 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300' },
+    idea: { pill: 'bg-yellow-500/20 text-yellow-300', active: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300' },
+    reflection: { pill: 'bg-blue-500/20 text-blue-300', active: 'bg-blue-500/20 border-blue-500/50 text-blue-300' },
+  };
+
   // Filter tasks by status
   const activeTasks = tasks
     .filter(task => task.status === 'active')
@@ -1602,7 +1610,6 @@ const App = () => {
                     lastDateLabel = dateLabel;
 
                     const isAuto = entry.entryType === 'auto';
-                    const tagColors = { blocker: 'red', win: 'emerald', idea: 'yellow', reflection: 'blue' };
 
                     return (
                       <div key={entry.id}>
@@ -1632,17 +1639,17 @@ const App = () => {
                               />
                               <div className="flex flex-wrap gap-2 mb-2">
                                 {[
-                                  { value: 'blocker', label: 'Blocker', color: 'red' },
-                                  { value: 'win', label: 'Win', color: 'emerald' },
-                                  { value: 'idea', label: 'Idea', color: 'yellow' },
-                                  { value: 'reflection', label: 'Reflection', color: 'blue' },
-                                ].map(({ value, label, color }) => (
+                                  { value: 'blocker', label: 'Blocker' },
+                                  { value: 'win', label: 'Win' },
+                                  { value: 'idea', label: 'Idea' },
+                                  { value: 'reflection', label: 'Reflection' },
+                                ].map(({ value, label }) => (
                                   <button
                                     key={value}
                                     onClick={() => setEditingJournalTag(editingJournalTag === value ? null : value)}
                                     className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
                                       editingJournalTag === value
-                                        ? `bg-${color}-500/20 border-${color}-500/50 text-${color}-300`
+                                        ? tagStyles[value].active
                                         : 'border-slate-600 text-slate-400 hover:border-slate-500'
                                     }`}
                                   >
@@ -1677,7 +1684,7 @@ const App = () => {
                                 </span>
                               )}
                               {entry.tag && (
-                                <span className={`flex-shrink-0 px-1.5 py-0 text-xs rounded-full bg-${tagColors[entry.tag]}-500/20 text-${tagColors[entry.tag]}-300`}>
+                                <span className={`flex-shrink-0 px-1.5 py-0 text-xs rounded-full ${tagStyles[entry.tag]?.pill || ''}`}>
                                   {entry.tag}
                                 </span>
                               )}
@@ -1750,17 +1757,17 @@ const App = () => {
               {/* Tag selector */}
               <div className="flex flex-wrap gap-2 mt-2">
                 {[
-                  { value: 'blocker', label: 'Blocker', color: 'red' },
-                  { value: 'win', label: 'Win', color: 'emerald' },
-                  { value: 'idea', label: 'Idea', color: 'yellow' },
-                  { value: 'reflection', label: 'Reflection', color: 'blue' },
-                ].map(({ value, label, color }) => (
+                  { value: 'blocker', label: 'Blocker' },
+                  { value: 'win', label: 'Win' },
+                  { value: 'idea', label: 'Idea' },
+                  { value: 'reflection', label: 'Reflection' },
+                ].map(({ value, label }) => (
                   <button
                     key={value}
                     onClick={() => setSelectedJournalTag(selectedJournalTag === value ? null : value)}
                     className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
                       selectedJournalTag === value
-                        ? `bg-${color}-500/20 border-${color}-500/50 text-${color}-300`
+                        ? tagStyles[value]?.active || ''
                         : 'border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-300'
                     }`}
                   >
