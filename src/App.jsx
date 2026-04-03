@@ -1943,11 +1943,16 @@ const App = () => {
               {viewingTask.dueDate && (
                 <div>
                   <label className="block text-slate-400 text-xs font-medium mb-1 uppercase tracking-wider">Due Date</label>
-                  <div className="flex items-center space-x-2">
+                  <div
+                    onClick={viewToEdit}
+                    className="flex items-center space-x-2 group/due hover:bg-slate-700/50 rounded p-1 -m-1 transition-colors cursor-pointer"
+                    title="Click to edit"
+                  >
                     <Icon name="clock" size={14} />
                     <span className={`text-sm ${new Date(viewingTask.dueDate) < new Date() ? 'text-red-400' : 'text-slate-300'}`}>
                       {new Date(viewingTask.dueDate).toLocaleString()}
                     </span>
+                    <Icon name="edit-3" size={12} className="text-slate-500 opacity-0 group-hover/due:opacity-100 transition-opacity" />
                   </div>
                 </div>
               )}
