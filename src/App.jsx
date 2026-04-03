@@ -1592,7 +1592,7 @@ const App = () => {
             ) : journalEntries.length === 0 ? (
               <p className="text-slate-500 italic text-center py-8">No journal entries yet. Write your first one below!</p>
             ) : (
-              <div className="divide-y divide-slate-700/50 mb-4">
+              <div className="divide-y divide-slate-700/50 mb-4 overflow-hidden">
                 {journalHasMore && (
                   <button
                     onClick={() => loadJournalEntries(journalPage + 1)}
@@ -1688,8 +1688,8 @@ const App = () => {
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-2 text-sm min-w-0">
-                              <span className="text-slate-500 text-xs flex-shrink-0 w-16 text-right">
+                            <div className="flex items-center gap-1.5 sm:gap-2 text-sm min-w-0 overflow-hidden">
+                              <span className="text-slate-500 text-xs flex-shrink-0 w-12 sm:w-16 text-right">
                                 {entryDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                               </span>
                               {isAuto && (
@@ -1706,12 +1706,12 @@ const App = () => {
                                 {entry.content}
                               </span>
                               {isAuto && entry.boardName && (
-                                <span className="text-slate-500 text-xs flex-shrink-0">
+                                <span className="text-slate-500 text-xs flex-shrink-0 hidden sm:inline">
                                   · {entry.boardName}
                                 </span>
                               )}
                               {!isAuto && entry.updatedAt !== entry.createdAt && (
-                                <span className="text-slate-600 text-xs flex-shrink-0">edited</span>
+                                <span className="text-slate-600 text-xs flex-shrink-0 hidden sm:inline">edited</span>
                               )}
                               {!isAuto && (
                                 <div className="flex gap-1.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1744,8 +1744,8 @@ const App = () => {
             )}
 
             {/* Input — pinned at bottom, chat-style */}
-            <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
-              <div className="flex gap-2">
+            <div className="bg-slate-800 rounded-lg p-3 border border-slate-700 overflow-hidden">
+              <div className="flex gap-2 min-w-0">
                 <textarea
                   value={newJournalEntry}
                   onChange={(e) => setNewJournalEntry(e.target.value)}
@@ -1757,7 +1757,7 @@ const App = () => {
                   }}
                   placeholder="What's on your mind?"
                   rows={1}
-                  className="flex-1 bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 resize-none"
+                  className="flex-1 min-w-0 bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 resize-none"
                   aria-label="New journal entry"
                 />
                 <button
@@ -1788,7 +1788,7 @@ const App = () => {
                     {label}
                   </button>
                 ))}
-                <span className="text-slate-600 text-xs ml-auto self-center">Ctrl+Enter</span>
+                <span className="text-slate-600 text-xs ml-auto self-center hidden sm:inline">Ctrl+Enter</span>
               </div>
             </div>
           </>
