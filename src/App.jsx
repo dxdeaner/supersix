@@ -257,6 +257,7 @@ const App = () => {
   const editTaskRef = useRef(null);
   const viewTaskRef = useRef(null);
   const deleteConfirmRef = useRef(null);
+  const journalEndRef = useRef(null);
 
   // Focus traps for inline modals (Phase 3)
   useFocusTrap(createBoardRef, showBoardModal, () => {
@@ -774,9 +775,10 @@ const App = () => {
     if (!content) return;
     try {
       const entry = await api.createJournalEntry(content, selectedJournalTag);
-      setJournalEntries(prev => [entry, ...prev]);
+      setJournalEntries(prev => [...prev, entry]);
       setNewJournalEntry('');
       setSelectedJournalTag(null);
+      journalScrollToBottom.current = true;
     } catch (err) {
       setError('Failed to add journal entry: ' + err.message);
     }
@@ -811,9 +813,19 @@ const App = () => {
   // Load/refresh journal entries when switching to journal view
   useEffect(() => {
     if (viewMode === 'journal') {
+      journalScrollToBottom.current = true;
       loadJournalEntries(1);
     }
   }, [viewMode]);
+
+  const journalScrollToBottom = useRef(false);
+  // Scroll to bottom when flagged (initial load or new entry)
+  useEffect(() => {
+    if (journalScrollToBottom.current && journalEntries.length > 0) {
+      journalScrollToBottom.current = false;
+      setTimeout(() => journalEndRef.current?.scrollIntoView({ behavior: 'auto' }), 50);
+    }
+  }, [journalEntries]);
 
   // ARIA tabs: arrow key navigation (Phase 3)
   const handleTabKeyDown = (e) => {
@@ -1537,9 +1549,9 @@ const App = () => {
           )}
           </>
           ) : (
-          /* Global Journal View */
+          /* Global Journal View — Chat-style layout */
           <>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
                 <Icon name="book-open" size={24} />
                 Journal
@@ -1552,65 +1564,26 @@ const App = () => {
               </button>
             </div>
 
-            {/* New entry input */}
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700 mb-6">
-              <textarea
-                value={newJournalEntry}
-                onChange={(e) => setNewJournalEntry(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                    e.preventDefault();
-                    addJournalEntry();
-                  }
-                }}
-                placeholder="What's on your mind?"
-                rows={3}
-                className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 resize-none mb-3"
-                aria-label="New journal entry"
-              />
-              {/* Tag selector */}
-              <div className="flex flex-wrap gap-2 mb-3">
-                {[
-                  { value: 'blocker', label: 'Blocker', color: 'red' },
-                  { value: 'win', label: 'Win', color: 'green' },
-                  { value: 'idea', label: 'Idea', color: 'yellow' },
-                  { value: 'reflection', label: 'Reflection', color: 'blue' },
-                ].map(({ value, label, color }) => (
-                  <button
-                    key={value}
-                    onClick={() => setSelectedJournalTag(selectedJournalTag === value ? null : value)}
-                    className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${
-                      selectedJournalTag === value
-                        ? `bg-${color}-500/20 border-${color}-500/50 text-${color}-300`
-                        : 'border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-300'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 text-xs">Ctrl+Enter to submit</span>
-                <button
-                  onClick={addJournalEntry}
-                  disabled={!newJournalEntry.trim()}
-                  className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors"
-                >
-                  Add Entry
-                </button>
-              </div>
-            </div>
-
-            {/* Entries feed */}
+            {/* Entries feed — chronological, oldest first */}
             {journalLoading && journalEntries.length === 0 ? (
               <p className="text-slate-500 text-center py-8">Loading entries...</p>
             ) : journalEntries.length === 0 ? (
-              <p className="text-slate-500 italic text-center py-8">No journal entries yet. Write your first one above!</p>
+              <p className="text-slate-500 italic text-center py-8">No journal entries yet. Write your first one below!</p>
             ) : (
-              <div className="divide-y divide-slate-700/50">
+              <div className="divide-y divide-slate-700/50 mb-4">
+                {journalHasMore && (
+                  <button
+                    onClick={() => loadJournalEntries(journalPage + 1)}
+                    disabled={journalLoading}
+                    className="w-full py-2 text-slate-400 hover:text-white text-sm transition-colors"
+                  >
+                    {journalLoading ? 'Loading...' : 'Load older entries'}
+                  </button>
+                )}
                 {(() => {
                   let lastDateLabel = '';
-                  return journalEntries.map((entry) => {
+                  const chronological = [...journalEntries].reverse();
+                  return chronological.map((entry) => {
                     const entryDate = new Date(entry.createdAt);
                     const today = new Date();
                     const yesterday = new Date();
@@ -1745,17 +1718,58 @@ const App = () => {
                   });
                 })()}
 
-                {journalHasMore && (
-                  <button
-                    onClick={() => loadJournalEntries(journalPage + 1)}
-                    disabled={journalLoading}
-                    className="w-full py-3 text-slate-400 hover:text-white text-sm transition-colors"
-                  >
-                    {journalLoading ? 'Loading...' : 'Load more'}
-                  </button>
-                )}
+                <div ref={journalEndRef} />
               </div>
             )}
+
+            {/* Input — pinned at bottom, chat-style */}
+            <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+              <div className="flex gap-2">
+                <textarea
+                  value={newJournalEntry}
+                  onChange={(e) => setNewJournalEntry(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      addJournalEntry();
+                    }
+                  }}
+                  placeholder="What's on your mind?"
+                  rows={1}
+                  className="flex-1 bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 resize-none"
+                  aria-label="New journal entry"
+                />
+                <button
+                  onClick={addJournalEntry}
+                  disabled={!newJournalEntry.trim()}
+                  className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors flex-shrink-0"
+                >
+                  Send
+                </button>
+              </div>
+              {/* Tag selector */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {[
+                  { value: 'blocker', label: 'Blocker', color: 'red' },
+                  { value: 'win', label: 'Win', color: 'green' },
+                  { value: 'idea', label: 'Idea', color: 'yellow' },
+                  { value: 'reflection', label: 'Reflection', color: 'blue' },
+                ].map(({ value, label, color }) => (
+                  <button
+                    key={value}
+                    onClick={() => setSelectedJournalTag(selectedJournalTag === value ? null : value)}
+                    className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                      selectedJournalTag === value
+                        ? `bg-${color}-500/20 border-${color}-500/50 text-${color}-300`
+                        : 'border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+                <span className="text-slate-600 text-xs ml-auto self-center">Ctrl+Enter</span>
+              </div>
+            </div>
           </>
           )}
         </div>
