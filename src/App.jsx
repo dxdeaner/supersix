@@ -333,6 +333,15 @@ const App = () => {
     }
   }, [currentBoard, user]);
 
+  // Sync current board's active_count in boards state when tasks change
+  useEffect(() => {
+    if (!currentBoard) return;
+    const activeCount = tasks.filter(t => t.status === 'active').length;
+    setBoards(prev => prev.map(b =>
+      b.id === currentBoard ? { ...b, active_count: activeCount } : b
+    ));
+  }, [tasks, currentBoard]);
+
   // Handle window resize
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -752,8 +761,12 @@ const App = () => {
 
   // Helper functions
   const getBoardStats = (boardId) => {
-    const activeTasks = tasks.filter(t => t.boardId === boardId && t.status === 'active').length;
-    return `${activeTasks}/${MAX_ACTIVE_TASKS}`;
+    if (boardId === currentBoard) {
+      const activeTasks = tasks.filter(t => t.status === 'active').length;
+      return `${activeTasks}/${MAX_ACTIVE_TASKS}`;
+    }
+    const board = boards.find(b => b.id === boardId);
+    return `${board?.active_count ?? 0}/${MAX_ACTIVE_TASKS}`;
   };
 
   const switchBoard = (boardId) => {
