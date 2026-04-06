@@ -1199,7 +1199,7 @@ const App = () => {
           <EmailVerificationBanner user={user} />
         )}
 
-        <div className="container mx-auto px-2 py-8 max-w-4xl overflow-x-hidden">
+        <div className={`container mx-auto px-2 py-8 max-w-4xl overflow-x-hidden ${viewMode === 'journal' ? 'flex flex-col h-[calc(100vh-4rem)]' : ''}`}>
           {viewMode === 'board' ? (
           <>
           {/* Board Title for Mobile */}
@@ -1585,8 +1585,8 @@ const App = () => {
           </>
           ) : (
           /* Global Journal View — Chat-style layout */
-          <div className="w-full min-w-0 overflow-hidden">
-            <div className="flex items-center justify-between mb-4">
+          <div className="w-full min-w-0 overflow-hidden flex flex-col flex-1 min-h-0">
+            <div className="flex items-center justify-between mb-4 shrink-0">
               <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
                 <Icon name="book-open" size={24} />
                 Journal
@@ -1600,6 +1600,7 @@ const App = () => {
             </div>
 
             {/* Entries feed — chronological, oldest first */}
+            <div className="flex-1 min-h-0 overflow-y-auto">
             {journalLoading && journalEntries.length === 0 ? (
               <p className="text-slate-500 text-center py-8">Loading entries...</p>
             ) : journalEntries.length === 0 ? (
@@ -1756,8 +1757,10 @@ const App = () => {
               </div>
             )}
 
+            </div>
+
             {/* Input — pinned at bottom, chat-style */}
-            <div className="bg-slate-800 rounded-lg p-3 border border-slate-700 overflow-hidden">
+            <div className="bg-slate-800 rounded-lg p-3 border border-slate-700 overflow-hidden shrink-0 mt-4">
               <div className="flex gap-2 min-w-0">
                 <textarea
                   value={newJournalEntry}
