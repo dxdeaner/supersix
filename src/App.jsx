@@ -1109,13 +1109,13 @@ const App = () => {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0">
+      <div className={`flex-1 min-w-0 ${viewMode === 'journal' ? 'flex flex-col h-screen overflow-hidden' : ''}`}>
         {/* Visually-hidden h1 for screen readers (Phase 3) */}
         <h1 className="sr-only">SuperSix Task Manager</h1>
 
         {/* Mobile Header */}
         {windowWidth < DESKTOP_BREAKPOINT && (
-          <div className="flex items-center justify-between p-4 bg-slate-800 border-b border-slate-700">
+          <div className="flex items-center justify-between p-4 bg-slate-800 border-b border-slate-700 shrink-0">
             <button
               onClick={() => setSidebarOpen(true)}
               className="text-slate-400 hover:text-white"
@@ -1146,7 +1146,7 @@ const App = () => {
 
         {/* Desktop Header */}
         {windowWidth >= DESKTOP_BREAKPOINT && (
-          <div className="flex items-center justify-between p-6 border-b border-slate-700">
+          <div className="flex items-center justify-between p-6 border-b border-slate-700 shrink-0">
             <div className="text-center flex-1">
               <img src="/SuperSix-Logo.png" alt="SuperSix" className="h-12 mx-auto mb-2" />
               <p className="text-slate-300 whitespace-pre-line italic font-light leading-relaxed">
@@ -1199,7 +1199,7 @@ const App = () => {
           <EmailVerificationBanner user={user} />
         )}
 
-        <div className={`container mx-auto px-2 py-8 max-w-4xl overflow-x-hidden ${viewMode === 'journal' ? 'flex flex-col h-[calc(100vh-4rem)]' : ''}`}>
+        <div className={`container mx-auto px-2 py-8 max-w-4xl overflow-x-hidden ${viewMode === 'journal' ? 'flex flex-col flex-1 min-h-0 overflow-hidden' : ''}`}>
           {viewMode === 'board' ? (
           <>
           {/* Board Title for Mobile */}
