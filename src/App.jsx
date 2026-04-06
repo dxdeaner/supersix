@@ -1600,7 +1600,7 @@ const App = () => {
             </div>
 
             {/* Entries feed — chronological, oldest first */}
-            <div className="flex-1 min-h-0 overflow-y-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto journal-scroll">
             {journalLoading && journalEntries.length === 0 ? (
               <p className="text-slate-500 text-center py-8">Loading entries...</p>
             ) : journalEntries.length === 0 ? (

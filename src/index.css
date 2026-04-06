@@ -75,3 +75,23 @@ button, [role="button"] { cursor: pointer; }
   animation: confettiPop 0.8s 0.2s ease-out forwards, confettiSpin 0.8s 0.2s linear forwards;
   opacity: 0;
 }
+
+/* Thin dark scrollbar for journal feed */
+.journal-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.journal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.journal-scroll::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 2px;
+}
+.journal-scroll::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+/* Firefox */
+.journal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
