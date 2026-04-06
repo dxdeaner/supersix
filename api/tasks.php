@@ -43,6 +43,9 @@ switch ($method) {
             case 'undo':
                 undoCompleteTask($pdo);
                 break;
+            case 'duplicate':
+                duplicateTask($pdo);
+                break;
             default:
                 sendResponse(['error' => 'Invalid action'], 400);
         }
@@ -691,6 +694,97 @@ function undoCompleteTask($pdo) {
         $pdo->rollback();
         error_log("Undo complete task error: " . $e->getMessage());
         sendResponse(['error' => 'Failed to restore task'], 500);
+    }
+}
+
+function duplicateTask($pdo) {
+    if (!isset($_SESSION['user_id'])) {
+        sendResponse(['error' => 'Authentication required'], 401);
+    }
+    $userId = $_SESSION['user_id'];
+
+    $data = getJsonInput();
+    validateRequired($data, ['id']);
+
+    try {
+        $pdo->beginTransaction();
+
+        // Get source task and verify ownership
+        $stmt = $pdo->prepare("
+            SELECT t.id, t.board_id, t.title, t.description, t.due_date, b.name as board_name
+            FROM tasks t
+            JOIN boards b ON t.board_id = b.id
+            WHERE t.id = ? AND b.user_id = ?
+        ");
+        $stmt->execute([$data['id'], $userId]);
+        $sourceTask = $stmt->fetch();
+
+        if (!$sourceTask) {
+            sendResponse(['error' => 'Task not found or access denied'], 404);
+        }
+
+        // Get next queue position
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(MAX(position), 0) + 1 as next_position
+            FROM tasks
+            WHERE board_id = ? AND status = 'queued'
+        ");
+        $stmt->execute([$sourceTask['board_id']]);
+        $nextPosition = $stmt->fetch()['next_position'];
+
+        // Insert duplicated task
+        $newTitle = mb_substr('Copy of ' . $sourceTask['title'], 0, 255);
+        $stmt = $pdo->prepare("
+            INSERT INTO tasks (board_id, title, description, status, position, due_date)
+            VALUES (?, ?, ?, 'queued', ?, ?)
+        ");
+        $stmt->execute([
+            $sourceTask['board_id'],
+            $newTitle,
+            $sourceTask['description'],
+            $nextPosition,
+            $sourceTask['due_date']
+        ]);
+
+        $newTaskId = $pdo->lastInsertId();
+
+        // Duplicate subtasks (reset completion)
+        $stmt = $pdo->prepare("
+            INSERT INTO subtasks (task_id, title, position, completed, completed_at)
+            SELECT ?, title, position, 0, NULL
+            FROM subtasks
+            WHERE task_id = ?
+            ORDER BY position
+        ");
+        $stmt->execute([$newTaskId, $sourceTask['id']]);
+
+        // Auto-log: task duplicated
+        insertJournalAutoLog($pdo, $userId, 'task_duplicated',
+            'Duplicated task "' . $sourceTask['title'] . '" on ' . $sourceTask['board_name'],
+            (int)$sourceTask['board_id'], $sourceTask['board_name'], (int)$newTaskId, $newTitle);
+
+        $pdo->commit();
+
+        // Return the new task
+        $stmt = $pdo->prepare("SELECT * FROM tasks WHERE id = ?");
+        $stmt->execute([$newTaskId]);
+        $task = $stmt->fetch();
+
+        sendResponse([
+            'id' => (int)$task['id'],
+            'boardId' => (int)$task['board_id'],
+            'title' => $task['title'],
+            'description' => $task['description'],
+            'status' => $task['status'],
+            'position' => (int)$task['position'],
+            'dueDate' => $task['due_date'],
+            'createdAt' => $task['created_at'],
+            'completedAt' => $task['completed_at']
+        ], 201);
+    } catch (PDOException $e) {
+        $pdo->rollback();
+        error_log("Duplicate task error: " . $e->getMessage());
+        sendResponse(['error' => 'Failed to duplicate task'], 500);
     }
 }
 

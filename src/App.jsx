@@ -746,6 +746,15 @@ const App = () => {
     () => [[setTasks, [...tasks]], [setEditingTask, editingTask]]
   );
 
+  const duplicateTask = withGuard(async (taskId) => {
+    const newTask = await api.duplicateTask(taskId);
+    setTasks(prev => [...prev, newTask]);
+    if (newTask.id) {
+      loadSubtasks(newTask.id);
+    }
+    scheduleReconcile();
+  });
+
   const undoComplete = withOptimistic(
     (taskId) => api.undoCompleteTask(taskId),
     (taskId) => {
@@ -1378,13 +1387,22 @@ const App = () => {
                                   <p className="text-slate-500 text-sm mt-1 line-clamp-1">{task.description}</p>
                                 )}
                               </div>
-                              <button
-                                onClick={() => undoComplete(task.id)}
-                                className="text-yellow-400 hover:text-yellow-300 text-sm flex-shrink-0 ml-2"
-                                aria-label={`Undo completion of ${task.title}`}
-                              >
-                                Undo
-                              </button>
+                              <div className="flex items-center space-x-3 flex-shrink-0 ml-2">
+                                <button
+                                  onClick={() => duplicateTask(task.id)}
+                                  className="text-slate-400 hover:text-slate-300 text-sm"
+                                  aria-label={`Duplicate ${task.title}`}
+                                >
+                                  Duplicate
+                                </button>
+                                <button
+                                  onClick={() => undoComplete(task.id)}
+                                  className="text-yellow-400 hover:text-yellow-300 text-sm"
+                                  aria-label={`Undo completion of ${task.title}`}
+                                >
+                                  Undo
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -1457,6 +1475,7 @@ const App = () => {
                         onMoveUp={moveTaskUp}
                         onMoveDown={moveTaskDown}
                         onDemote={demoteTask}
+                        onDuplicate={duplicateTask}
                         canMoveUp={slotIndex > 0}
                         canMoveDown={slotIndex < activeTasks.length - 1}
                         isMoving={movingTask === task.id}
@@ -1508,6 +1527,7 @@ const App = () => {
                           onMoveUp={moveTaskUp}
                           onMoveDown={moveTaskDown}
                           onPromote={promoteTask}
+                          onDuplicate={duplicateTask}
                           canMoveUp={index > 0}
                           canMoveDown={index < queuedTasks.length - 1}
                           isMoving={movingTask === task.id}
@@ -1566,13 +1586,22 @@ const App = () => {
                             Completed: {new Date(task.completedAt).toLocaleString()}
                           </p>
                         </div>
-                        <button
-                          onClick={() => undoComplete(task.id)}
-                          className="text-yellow-400 hover:text-yellow-300 text-sm"
-                          aria-label={`Undo completion of ${task.title}`}
-                        >
-                          Undo
-                        </button>
+                        <div className="flex items-center space-x-3">
+                          <button
+                            onClick={() => duplicateTask(task.id)}
+                            className="text-slate-400 hover:text-slate-300 text-sm"
+                            aria-label={`Duplicate ${task.title}`}
+                          >
+                            Duplicate
+                          </button>
+                          <button
+                            onClick={() => undoComplete(task.id)}
+                            className="text-yellow-400 hover:text-yellow-300 text-sm"
+                            aria-label={`Undo completion of ${task.title}`}
+                          >
+                            Undo
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}

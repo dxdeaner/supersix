@@ -22,7 +22,7 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return { value, label };
 });
 
-const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks, onUpdateDueDate }) => {
+const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, onDuplicate, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks, onUpdateDueDate }) => {
   const [expanded, setExpanded] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [dueDate, setDueDate] = useState('');
@@ -225,6 +225,14 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
             >
               <Icon name="arrow-down" size={12} />
               <span>Queue</span>
+            </button>
+            <button
+              onClick={() => onDuplicate(task.id)}
+              className="border border-slate-500 text-slate-500 hover:border-slate-400 hover:text-slate-400 bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
+              title="Duplicate task"
+            >
+              <Icon name="copy" size={12} />
+              <span>Duplicate</span>
             </button>
 
             <button

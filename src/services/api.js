@@ -206,6 +206,13 @@ const api = {
     });
   },
 
+  async duplicateTask(id) {
+    return this.request('/tasks.php?action=duplicate', {
+      method: 'POST',
+      body: JSON.stringify({ id }),
+    });
+  },
+
   // Subtask endpoints
   async getSubtasks(taskId) {
     return this.request(`/subtasks.php?task_id=${taskId}`);
