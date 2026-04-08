@@ -10,6 +10,7 @@ import TaskCard from './components/TaskCard';
 import QueueCard from './components/QueueCard';
 import SubtaskList from './components/SubtaskList';
 import QuickAddModal from './components/QuickAddModal';
+import CompletionModal from './components/CompletionModal';
 import OfflineIndicator from './components/OfflineIndicator';
 import ReloadPrompt from './components/ReloadPrompt';
 import useFocusTrap from './hooks/useFocusTrap';
@@ -73,6 +74,7 @@ const App = () => {
 
   // Completion animation state
   const [completingTask, setCompletingTask] = useState(null);
+  const [showCompletionModal, setShowCompletionModal] = useState(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -520,7 +522,7 @@ const App = () => {
 
   // Task management functions — Phase 4: optimistic updates (+ completion animation)
   const completeTaskInner = withOptimistic(
-    (taskId) => api.completeTask(taskId),
+    (taskId, result) => api.completeTask(taskId, result),
     (taskId) => {
       setTasks(prev => prev.map(t =>
         t.id === taskId
@@ -533,11 +535,31 @@ const App = () => {
   );
 
   const completeTask = (taskId) => {
-    // Start animation, then after 1.2s perform the actual completion
+    // Start animation, then show completion modal
     setCompletingTask(taskId);
     setTimeout(() => {
-      completeTaskInner(taskId);
+      setCompletingTask(null);
+      setShowCompletionModal(taskId);
     }, 1200);
+  };
+
+  const handleCompletionDone = async ({ result, followUpTitle }) => {
+    const taskId = showCompletionModal;
+    const task = tasks.find(t => t.id === taskId);
+    setShowCompletionModal(null);
+    await completeTaskInner(taskId, result || null);
+    if (followUpTitle && task) {
+      try {
+        const activeCount = tasks.filter(t => t.status === 'active' && t.id !== taskId).length;
+        const newTask = await api.createTask(task.boardId, followUpTitle);
+        if (activeCount < MAX_ACTIVE_TASKS && newTask?.id) {
+          await api.promoteTask(newTask.id);
+        }
+        loadTasks();
+      } catch (err) {
+        setError('Failed to add follow-up task: ' + err.message);
+      }
+    }
   };
 
   const postponeTask = withOptimistic(
@@ -1585,6 +1607,9 @@ const App = () => {
                           <p className="text-slate-400 text-sm">
                             Completed: {new Date(task.completedAt).toLocaleString()}
                           </p>
+                          {task.result && (
+                            <p className="text-slate-300 text-sm mt-1 italic">{task.result}</p>
+                          )}
                         </div>
                         <div className="flex items-center space-x-3">
                           <button
@@ -1842,6 +1867,15 @@ const App = () => {
       </div>
 
       {/* Modals */}
+
+      {/* Completion Modal */}
+      <CompletionModal
+        isOpen={showCompletionModal !== null}
+        onClose={() => handleCompletionDone({ result: '', followUpTitle: '' })}
+        onDone={handleCompletionDone}
+        taskTitle={showCompletionModal ? (tasks.find(t => t.id === showCompletionModal)?.title || '') : ''}
+        loading={loading}
+      />
 
       {/* Quick Add Task Modal */}
       <QuickAddModal

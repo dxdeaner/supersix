@@ -102,7 +102,8 @@ function getTasks($pdo) {
                 'position' => (int)$task['position'],
                 'dueDate' => $task['due_date'],
                 'createdAt' => $task['created_at'],
-                'completedAt' => $task['completed_at']
+                'completedAt' => $task['completed_at'],
+                'result' => $task['result'] ?? null
             ];
         }, $tasks);
         
@@ -305,31 +306,33 @@ function completeTask($pdo) {
     
     $data = getJsonInput();
     validateRequired($data, ['id']);
-    
+    $result = isset($data['result']) ? trim($data['result']) : null;
+    if ($result === '') $result = null;
+
     try {
         $pdo->beginTransaction();
-        
+
         // Get task info and verify ownership
         $stmt = $pdo->prepare("
-            SELECT t.board_id, t.status, t.position 
-            FROM tasks t 
-            JOIN boards b ON t.board_id = b.id 
+            SELECT t.board_id, t.status, t.position
+            FROM tasks t
+            JOIN boards b ON t.board_id = b.id
             WHERE t.id = ? AND b.user_id = ?
         ");
         $stmt->execute([$data['id'], $userId]);
         $task = $stmt->fetch();
-        
+
         if (!$task) {
             sendResponse(['error' => 'Task not found or access denied'], 404);
         }
-        
+
         // Mark as completed
         $stmt = $pdo->prepare("
-            UPDATE tasks 
-            SET status = 'completed', completed_at = NOW() 
+            UPDATE tasks
+            SET status = 'completed', completed_at = NOW(), result = ?
             WHERE id = ?
         ");
-        $stmt->execute([$data['id']]);
+        $stmt->execute([$result, $data['id']]);
         
         // Reorder active tasks if this was active
         if ($task['status'] === 'active') {
@@ -348,8 +351,12 @@ function completeTask($pdo) {
         $infoStmt = $pdo->prepare("SELECT t.title, b.name as board_name FROM tasks t JOIN boards b ON t.board_id = b.id WHERE t.id = ?");
         $infoStmt->execute([$data['id']]);
         $info = $infoStmt->fetch();
+        $journalContent = 'Completed task "' . $info['title'] . '" on ' . $info['board_name'];
+        if ($result !== null) {
+            $journalContent .= ' — ' . $result;
+        }
         insertJournalAutoLog($pdo, $userId, 'task_completed',
-            'Completed task "' . $info['title'] . '" on ' . $info['board_name'],
+            $journalContent,
             (int)$task['board_id'], $info['board_name'], (int)$data['id'], $info['title']);
 
         $pdo->commit();

@@ -164,10 +164,10 @@ const api = {
     });
   },
 
-  async completeTask(id) {
+  async completeTask(id, result = null) {
     return this.request('/tasks.php?action=complete', {
       method: 'POST',
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, result }),
     });
   },
 
