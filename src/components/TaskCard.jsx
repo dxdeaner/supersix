@@ -152,39 +152,41 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
               </div>
             )}
             {editingDueDate && (
-              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+              <div className="flex flex-wrap items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="bg-slate-700 border border-slate-600 rounded px-1.5 py-0.5 text-white text-xs focus:outline-none focus:border-cyan-400"
+                  className="bg-slate-700 border border-slate-600 rounded px-1.5 py-0.5 text-white text-xs focus:outline-none focus:border-cyan-400 min-w-0"
                 />
                 <select
                   value={dueTime}
                   onChange={(e) => setDueTime(e.target.value)}
-                  className="bg-slate-700 border border-slate-600 rounded px-1 py-0.5 text-white text-xs focus:outline-none focus:border-cyan-400"
+                  className="bg-slate-700 border border-slate-600 rounded px-1 py-0.5 text-white text-xs focus:outline-none focus:border-cyan-400 min-w-0"
                 >
                   {TIME_OPTIONS.map(({ value, label }) => (
                     <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
-                <button
-                  onClick={() => {
-                    if (dueDate && onUpdateDueDate) {
-                      onUpdateDueDate(task.id, `${dueDate}T${dueTime}`);
-                    }
-                    setEditingDueDate(false);
-                  }}
-                  className="bg-cyan-600 hover:bg-cyan-700 text-white px-1.5 py-0.5 rounded text-xs transition-colors"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setEditingDueDate(false)}
-                  className="bg-slate-600 hover:bg-slate-500 text-white px-1.5 py-0.5 rounded text-xs transition-colors"
-                >
-                  Cancel
-                </button>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => {
+                      if (dueDate && onUpdateDueDate) {
+                        onUpdateDueDate(task.id, `${dueDate}T${dueTime}`);
+                      }
+                      setEditingDueDate(false);
+                    }}
+                    className="bg-cyan-600 hover:bg-cyan-700 text-white px-1.5 py-0.5 rounded text-xs transition-colors"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => setEditingDueDate(false)}
+                    className="bg-slate-600 hover:bg-slate-500 text-white px-1.5 py-0.5 rounded text-xs transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
           </div>

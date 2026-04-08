@@ -1680,7 +1680,7 @@ const App = () => {
                                 value={editingJournalContent}
                                 onChange={(e) => setEditingJournalContent(e.target.value)}
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();
                                     saveJournalEdit();
                                   }
@@ -1795,7 +1795,7 @@ const App = () => {
                   value={newJournalEntry}
                   onChange={(e) => setNewJournalEntry(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       addJournalEntry();
                     }
@@ -1833,7 +1833,7 @@ const App = () => {
                     {label}
                   </button>
                 ))}
-                <span className="text-slate-600 text-xs ml-auto self-center hidden sm:inline">Ctrl+Enter</span>
+                <span className="text-slate-600 text-xs ml-auto self-center hidden sm:inline">Shift+Enter for new line</span>
               </div>
             </div>
           </div>
