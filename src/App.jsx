@@ -548,6 +548,8 @@ const App = () => {
     const task = tasks.find(t => t.id === taskId);
     setShowCompletionModal(null);
     await completeTaskInner(taskId, result || null);
+
+    // Create follow-up task if provided
     if (followUpTitle && task) {
       try {
         const activeCount = tasks.filter(t => t.status === 'active' && t.id !== taskId).length;
@@ -555,11 +557,14 @@ const App = () => {
         if (activeCount < MAX_ACTIVE_TASKS && newTask?.id) {
           await api.promoteTask(newTask.id);
         }
-        loadTasks();
       } catch (err) {
         setError('Failed to add follow-up task: ' + err.message);
       }
     }
+
+    // Always refresh from server — cancel the 2s reconcile to avoid races
+    if (reconcileRef.current) clearTimeout(reconcileRef.current);
+    loadTasks();
   };
 
   const postponeTask = withOptimistic(
