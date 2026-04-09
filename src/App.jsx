@@ -1146,7 +1146,7 @@ const App = () => {
       )}
 
       {/* Main Content */}
-      <div className={`flex-1 min-w-0 ${viewMode === 'journal' ? 'flex flex-col h-screen overflow-hidden' : ''}`}>
+      <div className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden">
         {/* Visually-hidden h1 for screen readers (Phase 3) */}
         <h1 className="sr-only">SuperSix Task Manager</h1>
 
@@ -1236,7 +1236,7 @@ const App = () => {
           <EmailVerificationBanner user={user} />
         )}
 
-        <div className={`container mx-auto px-2 py-8 max-w-4xl overflow-x-hidden ${viewMode === 'journal' ? 'flex flex-col flex-1 min-h-0 overflow-hidden' : ''}`}>
+        <div className={`container mx-auto px-2 py-8 max-w-4xl overflow-x-hidden flex-1 min-h-0 overflow-y-auto ${viewMode === 'journal' ? 'flex flex-col overflow-hidden' : ''}`}>
           {viewMode === 'board' ? (
           <>
           {/* Board Title for Mobile */}
@@ -1622,29 +1622,6 @@ const App = () => {
             </div>
           )}
 
-          {/* Sticky Add Task Bar */}
-          {activeTab === 'active' && (
-            <div className="sticky bottom-0 pt-3 pb-2 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={newTask}
-                  onChange={(e) => setNewTask(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addTask()}
-                  placeholder={activeTasks.length < MAX_ACTIVE_TASKS ? 'Add new task (auto-activates)...' : 'Add new task to queue...'}
-                  aria-label="New task title"
-                  className="flex-1 bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
-                />
-                <button
-                  onClick={addTask}
-                  disabled={!newTask.trim()}
-                  className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-          )}
           </>
           ) : (
           /* Global Journal View — Chat-style layout */
@@ -1876,6 +1853,30 @@ const App = () => {
           </div>
           )}
         </div>
+
+        {/* Pinned Add Task Bar */}
+        {viewMode === 'board' && activeTab === 'active' && (
+          <div className="shrink-0 px-2 pb-3 pt-2 max-w-4xl mx-auto w-full border-t border-slate-700/50 bg-slate-900">
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                value={newTask}
+                onChange={(e) => setNewTask(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addTask()}
+                placeholder={activeTasks.length < MAX_ACTIVE_TASKS ? 'Add new task (auto-activates)...' : 'Add new task to queue...'}
+                aria-label="New task title"
+                className="flex-1 bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
+              />
+              <button
+                onClick={addTask}
+                disabled={!newTask.trim()}
+                className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modals */}
