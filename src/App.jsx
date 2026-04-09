@@ -241,6 +241,7 @@ const App = () => {
   const [editingJournalContent, setEditingJournalContent] = useState('');
   const [editingJournalTag, setEditingJournalTag] = useState(null);
   const [journalDeleteConfirm, setJournalDeleteConfirm] = useState(null);
+  const [expandedJournalId, setExpandedJournalId] = useState(null);
 
   // Auto-load subtasks for all tasks when tasks change
   useEffect(() => {
@@ -1761,12 +1762,15 @@ const App = () => {
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1.5 sm:gap-2 text-sm w-full overflow-hidden">
-                              <span className="text-slate-500 text-xs shrink-0">
+                            <div
+                              className="flex items-start gap-1.5 sm:gap-2 text-sm w-full cursor-pointer"
+                              onClick={() => setExpandedJournalId(expandedJournalId === entry.id ? null : entry.id)}
+                            >
+                              <span className="text-slate-500 text-xs shrink-0 mt-0.5">
                                 {entryDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                               </span>
                               {isAuto && (
-                                <span className="text-slate-500 shrink-0">
+                                <span className="text-slate-500 shrink-0 mt-0.5">
                                   <Icon name="clock" size={12} />
                                 </span>
                               )}
@@ -1775,19 +1779,19 @@ const App = () => {
                                   {entry.tag}
                                 </span>
                               )}
-                              <span className={`truncate min-w-0 ${isAuto ? 'text-slate-400' : 'text-slate-200'}`} title={entry.content}>
+                              <span className={`min-w-0 ${expandedJournalId === entry.id ? 'whitespace-pre-wrap break-words' : 'truncate'} ${isAuto ? 'text-slate-400' : 'text-slate-200'}`}>
                                 {entry.content}
                               </span>
-                              {isAuto && entry.boardName && (
-                                <span className="text-slate-500 text-xs shrink-0 hidden sm:inline">
+                              {expandedJournalId !== entry.id && isAuto && entry.boardName && (
+                                <span className="text-slate-500 text-xs shrink-0 hidden sm:inline mt-0.5">
                                   · {entry.boardName}
                                 </span>
                               )}
-                              {!isAuto && entry.updatedAt !== entry.createdAt && (
-                                <span className="text-slate-600 text-xs shrink-0 hidden sm:inline">edited</span>
+                              {expandedJournalId !== entry.id && !isAuto && entry.updatedAt !== entry.createdAt && (
+                                <span className="text-slate-600 text-xs shrink-0 hidden sm:inline mt-0.5">edited</span>
                               )}
                               {!isAuto && (
-                                <div className="flex gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5" onClick={(e) => e.stopPropagation()}>
                                   <button
                                     onClick={() => { setEditingJournalId(entry.id); setEditingJournalContent(entry.content); setEditingJournalTag(entry.tag); }}
                                     className="text-slate-400 hover:text-cyan-400 text-xs"
