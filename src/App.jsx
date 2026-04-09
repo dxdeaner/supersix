@@ -1236,7 +1236,7 @@ const App = () => {
           <EmailVerificationBanner user={user} />
         )}
 
-        <div className={`container mx-auto px-2 py-8 max-w-4xl overflow-x-hidden flex-1 min-h-0 overflow-y-auto journal-scroll ${viewMode === 'journal' ? 'flex flex-col overflow-hidden' : ''}`}>
+        <div className={`container mx-auto px-2 py-8 max-w-4xl overflow-x-hidden flex-1 min-h-0 overflow-y-auto ${viewMode === 'journal' ? 'flex flex-col overflow-hidden' : ''}`}>
           {viewMode === 'board' ? (
           <>
           {/* Board Title for Mobile */}
