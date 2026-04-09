@@ -1571,6 +1571,27 @@ const App = () => {
                     </div>
                   )}
 
+                  {/* Add Task Input */}
+                  <div className="mt-4">
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={newTask}
+                        onChange={(e) => setNewTask(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addTask()}
+                        placeholder={activeTasks.length < MAX_ACTIVE_TASKS ? 'Add new task (auto-activates)...' : 'Add new task to queue...'}
+                        aria-label="New task title"
+                        className="flex-1 bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
+                      />
+                      <button
+                        onClick={addTask}
+                        disabled={!newTask.trim()}
+                        className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1619,30 +1640,6 @@ const App = () => {
               ) : (
                 <p className="text-slate-500 italic text-center py-8">No completed tasks yet</p>
               )}
-            </div>
-          )}
-
-          {/* Sticky Add Task Bar */}
-          {activeTab === 'active' && (
-            <div className="sticky bottom-0 pt-3 pb-2 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={newTask}
-                  onChange={(e) => setNewTask(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addTask()}
-                  placeholder={activeTasks.length < MAX_ACTIVE_TASKS ? 'Add new task (auto-activates)...' : 'Add new task to queue...'}
-                  aria-label="New task title"
-                  className="flex-1 bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
-                />
-                <button
-                  onClick={addTask}
-                  disabled={!newTask.trim()}
-                  className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors"
-                >
-                  Add
-                </button>
-              </div>
             </div>
           )}
           </>
