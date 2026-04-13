@@ -1890,11 +1890,11 @@ const App = () => {
       <QuickAddModal
         isOpen={showQuickAddModal}
         onClose={() => setShowQuickAddModal(false)}
-        onAdd={async (taskTitle) => {
+        onAdd={async (taskTitle, dueDate) => {
           if (currentBoard) {
             try {
               const activeCount = tasks.filter(t => t.status === 'active').length;
-              const result = await api.createTask(currentBoard, taskTitle);
+              const result = await api.createTask(currentBoard, taskTitle, '', dueDate);
               // Auto-promote if there's room in active focus
               if (activeCount < MAX_ACTIVE_TASKS && result && result.id) {
                 await api.promoteTask(result.id);
@@ -2166,6 +2166,46 @@ const App = () => {
                       );
                     })}
                   </select>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {[
+                    { key: 'today', label: 'Today 3:30' },
+                    { key: 'tomorrow', label: 'Tomorrow 3:30' },
+                    { key: 'friday', label: 'Friday 3:30' },
+                  ].map(({ key, label }) => {
+                    const today = new Date();
+                    let d;
+                    if (key === 'today') {
+                      d = today;
+                    } else if (key === 'tomorrow') {
+                      d = new Date(today);
+                      d.setDate(d.getDate() + 1);
+                    } else {
+                      d = new Date(today);
+                      const day = d.getDay();
+                      const daysUntilFri = day <= 5 ? 5 - day : 6;
+                      d.setDate(d.getDate() + daysUntilFri);
+                    }
+                    const dateStr = `${d.toISOString().split('T')[0]}T15:30`;
+                    const isActive = editingTask.dueDate === dateStr;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setEditingTask({
+                          ...editingTask,
+                          dueDate: isActive ? '' : dateStr
+                        })}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          isActive
+                            ? 'bg-cyan-600 text-white border border-cyan-500'
+                            : 'bg-slate-700 text-slate-300 border border-slate-600 hover:border-slate-500'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
