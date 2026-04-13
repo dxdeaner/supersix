@@ -248,11 +248,10 @@ sudo apt install postfix
 Or use a service like SendGrid, Mailgun, or Amazon SES (requires code modification).
 
 ### Session Configuration
-PHP session settings in `php.ini` or `.htaccess`:
-```ini
-session.gc_maxlifetime = 2592000  ; 30 days
-session.cookie_lifetime = 2592000 ; 30 days for "Remember Me"
-```
+Session lifetime and storage are configured automatically by the app in
+`api/security.php`. Sessions are stored in `api/sessions/` (auto-created
+with `0700` permissions) with a 30-day `gc_maxlifetime`. No manual
+`php.ini` or `.htaccess` changes are required.
 
 ---
 

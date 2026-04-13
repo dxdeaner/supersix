@@ -9,15 +9,34 @@ function startSecureSession(bool $rememberMe = false): void {
     }
 
     $isHttps = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    $lifetime = 30 * 24 * 60 * 60; // 30 days
 
-    // Start with a default (session-only) cookie so we can read the session
+    // ── Configure BEFORE session_start() ────────────────────────────
+    // Use a dedicated session directory so other PHP apps' GC can't
+    // destroy our sessions with a shorter gc_maxlifetime.
+    $sessionDir = __DIR__ . '/sessions';
+    if (!is_dir($sessionDir)) {
+        mkdir($sessionDir, 0700, true);
+    }
+    ini_set('session.save_path', $sessionDir);
+
+    // Set gc_maxlifetime unconditionally to 30 days. Non-remember-me
+    // sessions still expire on browser close (cookie lifetime 0), so
+    // the only effect is that their server-side files linger longer —
+    // harmless and avoids a chicken-and-egg problem (we can't read
+    // $_SESSION before session_start).
+    ini_set('session.gc_maxlifetime', $lifetime);
+
+    // Cookie lifetime: 30 days if rememberMe requested, otherwise
+    // session-only (expires when browser closes).
+    $cookieLifetime = $rememberMe ? $lifetime : 0;
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => $cookieLifetime,
         'path'     => '/',
         'domain'   => '',
         'secure'   => $isHttps,
         'httponly'  => true,
-        'samesite'  => 'Lax',
+        'samesite' => 'Lax',
     ]);
 
     session_start();
@@ -27,19 +46,11 @@ function startSecureSession(bool $rememberMe = false): void {
         $_SESSION['remember_me'] = true;
     }
 
-    // Honour the stored preference on every subsequent request
-    if (!empty($_SESSION['remember_me'])) {
-        $lifetime = 30 * 24 * 60 * 60;
-        ini_set('session.gc_maxlifetime', $lifetime);
-        session_set_cookie_params([
-            'lifetime' => $lifetime,
-            'path'     => '/',
-            'domain'   => '',
-            'secure'   => $isHttps,
-            'httponly'  => true,
-            'samesite'  => 'Lax',
-        ]);
-        // Refresh the cookie with the long lifetime
+    // On subsequent requests (not login/register) where remember_me
+    // was previously set: refresh the cookie with 30-day expiry.
+    // We couldn't set this via session_set_cookie_params above because
+    // we didn't know the preference until after session_start().
+    if (!empty($_SESSION['remember_me']) && !$rememberMe) {
         setcookie(session_name(), session_id(), [
             'expires'  => time() + $lifetime,
             'path'     => '/',
