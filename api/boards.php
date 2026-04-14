@@ -60,7 +60,7 @@ function getBoards($pdo) {
                 'color' => $board['color'],
                 'archived' => (bool)$board['archived'],
                 'active_count' => (int)$board['active_count'],
-                'createdAt' => $board['created_at']
+                'createdAt' => toIsoUtc($board['created_at'])
             ];
         }, $boards);
         
@@ -141,7 +141,7 @@ function createBoard($pdo) {
             'color' => $board['color'],
             'archived' => (bool)$board['archived'],
             'active_count' => (int)$board['active_count'],
-            'createdAt' => $board['created_at']
+            'createdAt' => toIsoUtc($board['created_at'])
         ];
         
         sendResponse($formattedBoard, 201);

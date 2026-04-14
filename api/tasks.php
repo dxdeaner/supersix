@@ -101,8 +101,8 @@ function getTasks($pdo) {
                 'status' => $task['status'],
                 'position' => (int)$task['position'],
                 'dueDate' => $task['due_date'],
-                'createdAt' => $task['created_at'],
-                'completedAt' => $task['completed_at'],
+                'createdAt' => toIsoUtc($task['created_at']),
+                'completedAt' => toIsoUtc($task['completed_at']),
                 'result' => $task['result'] ?? null
             ];
         }, $tasks);
@@ -185,8 +185,8 @@ function createTask($pdo) {
             'status' => $task['status'],
             'position' => (int)$task['position'],
             'dueDate' => $task['due_date'],
-            'createdAt' => $task['created_at'],
-            'completedAt' => $task['completed_at']
+            'createdAt' => toIsoUtc($task['created_at']),
+            'completedAt' => toIsoUtc($task['completed_at'])
         ], 201);
     } catch (PDOException $e) {
         error_log("Create task error: " . $e->getMessage());
@@ -785,8 +785,8 @@ function duplicateTask($pdo) {
             'status' => $task['status'],
             'position' => (int)$task['position'],
             'dueDate' => $task['due_date'],
-            'createdAt' => $task['created_at'],
-            'completedAt' => $task['completed_at']
+            'createdAt' => toIsoUtc($task['created_at']),
+            'completedAt' => toIsoUtc($task['completed_at'])
         ], 201);
     } catch (PDOException $e) {
         $pdo->rollback();

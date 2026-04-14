@@ -68,8 +68,8 @@ function getEntries($pdo) {
                 'boardName' => $entry['board_name'],
                 'taskId' => $entry['task_id'] ? (int)$entry['task_id'] : null,
                 'taskTitle' => $entry['task_title'],
-                'createdAt' => $entry['created_at'],
-                'updatedAt' => $entry['updated_at'],
+                'createdAt' => toIsoUtc($entry['created_at']),
+                'updatedAt' => toIsoUtc($entry['updated_at']),
             ];
         }, $entries);
 
@@ -122,8 +122,8 @@ function createEntry($pdo) {
             'boardName' => $entry['board_name'],
             'taskId' => $entry['task_id'] ? (int)$entry['task_id'] : null,
             'taskTitle' => $entry['task_title'],
-            'createdAt' => $entry['created_at'],
-            'updatedAt' => $entry['updated_at'],
+            'createdAt' => toIsoUtc($entry['created_at']),
+            'updatedAt' => toIsoUtc($entry['updated_at']),
         ], 201);
     } catch (PDOException $e) {
         error_log("Create journal entry error: " . $e->getMessage());

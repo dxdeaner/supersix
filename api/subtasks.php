@@ -82,8 +82,8 @@ function getSubtasks($pdo) {
                 'title' => $subtask['title'],
                 'completed' => (bool)$subtask['completed'],
                 'position' => (int)$subtask['position'],
-                'createdAt' => $subtask['created_at'],
-                'completedAt' => $subtask['completed_at']
+                'createdAt' => toIsoUtc($subtask['created_at']),
+                'completedAt' => toIsoUtc($subtask['completed_at'])
             ];
         }, $subtasks);
         
@@ -152,8 +152,8 @@ function createSubtask($pdo) {
             'title' => $subtask['title'],
             'completed' => (bool)$subtask['completed'],
             'position' => (int)$subtask['position'],
-            'createdAt' => $subtask['created_at'],
-            'completedAt' => $subtask['completed_at']
+            'createdAt' => toIsoUtc($subtask['created_at']),
+            'completedAt' => toIsoUtc($subtask['completed_at'])
         ], 201);
     } catch (PDOException $e) {
         error_log("Create subtask error: " . $e->getMessage());

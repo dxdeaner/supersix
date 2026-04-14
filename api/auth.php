@@ -227,7 +227,7 @@ function getCurrentUser($pdo)
                 'name' => $user['name'],
                 'email' => $user['email'],
                 'email_verified' => (bool) $user['email_verified'],
-                'created_at' => $user['dt_created']
+                'created_at' => toIsoUtc($user['dt_created'])
             ]
         ]);
 
