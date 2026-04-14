@@ -57,6 +57,13 @@ class Database {
                 ];
 
                 $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
+                // Force UTC session timezone so TIMESTAMP columns read back in UTC.
+                // Wrapped so a privilege/config issue here can't kill the connection.
+                try {
+                    $this->connection->exec("SET time_zone = '+00:00'");
+                } catch (PDOException $tzErr) {
+                    error_log("Could not set UTC session timezone: " . $tzErr->getMessage());
+                }
             } catch (PDOException $e) {
                 http_response_code(500);
                 echo json_encode(['error' => 'Database connection failed']);

@@ -1,6 +1,21 @@
 <?php
 // security.php - Shared security utilities for SuperSix API
 
+// ── Timestamp Helpers ───────────────────────────────────────────────
+
+/**
+ * Convert a MySQL datetime string (assumed UTC — ensure the DB session
+ * timezone is set to '+00:00') into an ISO 8601 string with 'Z' suffix
+ * so browsers parse it as UTC.
+ * Returns null for null/empty/zero inputs.
+ */
+function toIsoUtc($dt) {
+    if ($dt === null || $dt === '' || $dt === '0000-00-00 00:00:00') {
+        return null;
+    }
+    return str_replace(' ', 'T', $dt) . 'Z';
+}
+
 // ── Session Management ──────────────────────────────────────────────
 
 function startSecureSession(bool $rememberMe = false): void {
