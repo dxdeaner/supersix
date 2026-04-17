@@ -2044,6 +2044,21 @@ const App = () => {
                 </div>
               )}
 
+              {viewingTask.url && (
+                <div>
+                  <label className="block text-slate-400 text-xs font-medium mb-1 uppercase tracking-wider">URL</label>
+                  <a
+                    href={viewingTask.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-cyan-400 hover:text-cyan-300 transition-colors break-all"
+                  >
+                    <Icon name="external-link" size={13} />
+                    <span>{viewingTask.url}</span>
+                  </a>
+                </div>
+              )}
+
               {viewingTask.dueDate && (
                 <div>
                   <label className="block text-slate-400 text-xs font-medium mb-1 uppercase tracking-wider">Due Date</label>
