@@ -103,7 +103,8 @@ function getTasks($pdo) {
                 'dueDate' => $task['due_date'],
                 'createdAt' => toIsoUtc($task['created_at']),
                 'completedAt' => toIsoUtc($task['completed_at']),
-                'result' => $task['result'] ?? null
+                'result' => $task['result'] ?? null,
+                'url'    => $task['url'] ?? null,
             ];
         }, $tasks);
         
@@ -126,6 +127,7 @@ function createTask($pdo) {
     enforceMaxLengths($data, [
         'title'       => MAX_LENGTHS['task_title'],
         'description' => MAX_LENGTHS['description'],
+        'url'         => MAX_LENGTHS['url'],
     ]);
 
     try {
@@ -147,19 +149,20 @@ function createTask($pdo) {
         $nextPosition = $result['next_position'];
         
         $stmt = $pdo->prepare("
-            INSERT INTO tasks (board_id, title, description, status, position, due_date) 
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO tasks (board_id, title, description, status, position, due_date, url)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
-        
+
         $dueDate = isset($data['dueDate']) && !empty($data['dueDate']) ? $data['dueDate'] : null;
-        
+
         $stmt->execute([
             $data['board_id'],
             trim($data['title']),
             $data['description'] ?? '',
             'queued',
             $nextPosition,
-            $dueDate
+            $dueDate,
+            $data['url'] ?? null,
         ]);
         
         $taskId = $pdo->lastInsertId();
@@ -186,7 +189,8 @@ function createTask($pdo) {
             'position' => (int)$task['position'],
             'dueDate' => $task['due_date'],
             'createdAt' => toIsoUtc($task['created_at']),
-            'completedAt' => toIsoUtc($task['completed_at'])
+            'completedAt' => toIsoUtc($task['completed_at']),
+            'url' => $task['url'] ?? null,
         ], 201);
     } catch (PDOException $e) {
         error_log("Create task error: " . $e->getMessage());
@@ -206,6 +210,7 @@ function updateTask($pdo) {
     enforceMaxLengths($data, [
         'title'       => MAX_LENGTHS['task_title'],
         'description' => MAX_LENGTHS['description'],
+        'url'         => MAX_LENGTHS['url'],
     ]);
 
     try {
@@ -221,20 +226,22 @@ function updateTask($pdo) {
             sendResponse(['error' => 'Task not found or access denied'], 404);
         }
         
+        $dueDate = isset($data['dueDate']) && !empty($data['dueDate']) ? $data['dueDate'] : null;
+
+        // Only update url if the key was explicitly sent (prevents edits from wiping it)
+        $urlSql = array_key_exists('url', $data) ? ', url = ?' : '';
         $stmt = $pdo->prepare("
-            UPDATE tasks 
-            SET title = ?, description = ?, due_date = ?
+            UPDATE tasks
+            SET title = ?, description = ?, due_date = ?{$urlSql}
             WHERE id = ?
         ");
-        
-        $dueDate = isset($data['dueDate']) && !empty($data['dueDate']) ? $data['dueDate'] : null;
-        
-        $result = $stmt->execute([
-            trim($data['title']),
-            $data['description'] ?? '',
-            $dueDate,
-            $data['id']
-        ]);
+        $params = [trim($data['title']), $data['description'] ?? '', $dueDate];
+        if (array_key_exists('url', $data)) {
+            $params[] = $data['url'] ?: null;
+        }
+        $params[] = $data['id'];
+
+        $result = $stmt->execute($params);
         
         sendResponse(['message' => 'Task updated successfully']);
     } catch (PDOException $e) {
@@ -718,7 +725,7 @@ function duplicateTask($pdo) {
 
         // Get source task and verify ownership
         $stmt = $pdo->prepare("
-            SELECT t.id, t.board_id, t.title, t.description, t.due_date, b.name as board_name
+            SELECT t.id, t.board_id, t.title, t.description, t.due_date, t.url, b.name as board_name
             FROM tasks t
             JOIN boards b ON t.board_id = b.id
             WHERE t.id = ? AND b.user_id = ?
@@ -742,15 +749,16 @@ function duplicateTask($pdo) {
         // Insert duplicated task
         $newTitle = mb_substr('Copy of ' . $sourceTask['title'], 0, 255);
         $stmt = $pdo->prepare("
-            INSERT INTO tasks (board_id, title, description, status, position, due_date)
-            VALUES (?, ?, ?, 'queued', ?, ?)
+            INSERT INTO tasks (board_id, title, description, status, position, due_date, url)
+            VALUES (?, ?, ?, 'queued', ?, ?, ?)
         ");
         $stmt->execute([
             $sourceTask['board_id'],
             $newTitle,
             $sourceTask['description'],
             $nextPosition,
-            $sourceTask['due_date']
+            $sourceTask['due_date'],
+            $sourceTask['url'],
         ]);
 
         $newTaskId = $pdo->lastInsertId();
@@ -786,7 +794,8 @@ function duplicateTask($pdo) {
             'position' => (int)$task['position'],
             'dueDate' => $task['due_date'],
             'createdAt' => toIsoUtc($task['created_at']),
-            'completedAt' => toIsoUtc($task['completed_at'])
+            'completedAt' => toIsoUtc($task['completed_at']),
+            'url' => $task['url'] ?? null,
         ], 201);
     } catch (PDOException $e) {
         $pdo->rollback();

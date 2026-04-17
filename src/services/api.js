@@ -139,22 +139,23 @@ const api = {
     return this.request(`/tasks.php?board_id=${boardId}`);
   },
 
-  async createTask(boardId, title, description = '', dueDate = null) {
+  async createTask(boardId, title, description = '', dueDate = null, url = null) {
     return this.request('/tasks.php', {
       method: 'POST',
       body: JSON.stringify({
         board_id: boardId,
         title,
         description,
-        dueDate
+        dueDate,
+        url,
       }),
     });
   },
 
-  async updateTask(id, title, description, dueDate) {
+  async updateTask(id, title, description, dueDate, url = undefined) {
     return this.request('/tasks.php', {
       method: 'PUT',
-      body: JSON.stringify({ id, title, description, dueDate }),
+      body: JSON.stringify({ id, title, description, dueDate, ...(url !== undefined && { url }) }),
     });
   },
 

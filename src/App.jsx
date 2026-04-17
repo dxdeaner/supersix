@@ -544,7 +544,7 @@ const App = () => {
     }, 1200);
   };
 
-  const handleCompletionDone = async ({ result, followUpTitle }) => {
+  const handleCompletionDone = async ({ result, followUpTitle, followUpUrl }) => {
     const taskId = showCompletionModal;
     const task = tasks.find(t => t.id === taskId);
     setShowCompletionModal(null);
@@ -554,7 +554,7 @@ const App = () => {
     if (followUpTitle && task) {
       try {
         const activeCount = tasks.filter(t => t.status === 'active' && t.id !== taskId).length;
-        const newTask = await api.createTask(task.boardId, followUpTitle);
+        const newTask = await api.createTask(task.boardId, followUpTitle, '', null, followUpUrl || null);
         if (activeCount < MAX_ACTIVE_TASKS && newTask?.id) {
           await api.promoteTask(newTask.id);
         }

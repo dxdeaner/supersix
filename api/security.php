@@ -193,6 +193,7 @@ const MAX_LENGTHS = [
     'description'      => 5000,
     'color'            => 20,
     'journal_content'  => 5000,
+    'url'              => 2048,
 ];
 
 function enforceMaxLengths(array $data, array $fieldLimits): void {

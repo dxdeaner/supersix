@@ -5,6 +5,7 @@ import useFocusTrap from '../hooks/useFocusTrap';
 const CompletionModal = ({ isOpen, onClose, onDone, taskTitle, loading }) => {
   const [result, setResult] = useState('');
   const [followUpTitle, setFollowUpTitle] = useState('');
+  const [followUpUrl, setFollowUpUrl] = useState('');
   const dialogRef = useRef(null);
 
   useFocusTrap(dialogRef, isOpen, () => {
@@ -12,9 +13,10 @@ const CompletionModal = ({ isOpen, onClose, onDone, taskTitle, loading }) => {
   });
 
   const handleDone = () => {
-    onDone({ result: result.trim(), followUpTitle: followUpTitle.trim() });
+    onDone({ result: result.trim(), followUpTitle: followUpTitle.trim(), followUpUrl: followUpUrl.trim() });
     setResult('');
     setFollowUpTitle('');
+    setFollowUpUrl('');
   };
 
   if (!isOpen) return null;
@@ -73,6 +75,21 @@ const CompletionModal = ({ isOpen, onClose, onDone, taskTitle, loading }) => {
               placeholder="Add a follow-up task..."
             />
           </div>
+
+          {followUpTitle && (
+            <div>
+              <label className="block text-slate-300 text-sm font-medium mb-1">
+                Follow-up URL <span className="text-slate-500 font-normal">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={followUpUrl}
+                onChange={(e) => setFollowUpUrl(e.target.value)}
+                className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
+                placeholder="https://..."
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end mt-6">

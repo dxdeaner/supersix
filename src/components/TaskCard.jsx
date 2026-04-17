@@ -198,6 +198,22 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
             </div>
           )}
 
+          {/* URL link */}
+          {task.url && (
+            <div className="mt-1 mb-2">
+              <a
+                href={task.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-cyan-400 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Icon name="external-link" size={12} />
+                <span className="truncate max-w-[200px]">{task.url}</span>
+              </a>
+            </div>
+          )}
+
           <div className="flex items-center flex-wrap gap-2">
             <button
               onClick={() => onComplete(task.id)}
