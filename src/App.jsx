@@ -723,7 +723,8 @@ const App = () => {
       id: task.id,
       title: task.title,
       description: task.description || '',
-      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : ''
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
+      url: task.url || '',
     });
 
     // Load subtasks for this task
@@ -760,13 +761,14 @@ const App = () => {
         editingTask.id,
         editingTask.title,
         editingTask.description,
-        editingTask.dueDate || null
+        editingTask.dueDate || null,
+        editingTask.url || null,
       );
     },
     () => {
       setTasks(prev => prev.map(t =>
         t.id === editingTask.id
-          ? { ...t, title: editingTask.title, description: editingTask.description, dueDate: editingTask.dueDate || null }
+          ? { ...t, title: editingTask.title, description: editingTask.description, dueDate: editingTask.dueDate || null, url: editingTask.url || null }
           : t
       ));
       setEditingTask(null);
@@ -1890,11 +1892,11 @@ const App = () => {
       <QuickAddModal
         isOpen={showQuickAddModal}
         onClose={() => setShowQuickAddModal(false)}
-        onAdd={async (taskTitle, dueDate) => {
+        onAdd={async (taskTitle, dueDate, url) => {
           if (currentBoard) {
             try {
               const activeCount = tasks.filter(t => t.status === 'active').length;
-              const result = await api.createTask(currentBoard, taskTitle, '', dueDate);
+              const result = await api.createTask(currentBoard, taskTitle, '', dueDate, url);
               // Auto-promote if there's room in active focus
               if (activeCount < MAX_ACTIVE_TASKS && result && result.id) {
                 await api.promoteTask(result.id);
@@ -2207,6 +2209,17 @@ const App = () => {
                     );
                   })}
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 text-sm font-medium mb-1">URL <span className="text-slate-500 font-normal">(optional)</span></label>
+                <input
+                  type="text"
+                  value={editingTask.url}
+                  onChange={(e) => setEditingTask({ ...editingTask, url: e.target.value })}
+                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
+                  placeholder="https://..."
+                />
               </div>
             </div>
 

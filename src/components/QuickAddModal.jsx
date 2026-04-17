@@ -26,6 +26,7 @@ const QUICK_DATES = [
 const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
   const [newTask, setNewTask] = useState('');
   const [dueDate, setDueDate] = useState(null);
+  const [url, setUrl] = useState('');
   const dialogRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -39,9 +40,10 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
 
   const handleAdd = () => {
     if (newTask.trim()) {
-      onAdd(newTask.trim(), dueDate);
+      onAdd(newTask.trim(), dueDate, url.trim() || null);
       setNewTask('');
       setDueDate(null);
+      setUrl('');
       onClose();
     }
   };
@@ -49,6 +51,7 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
   const handleClose = () => {
     setNewTask('');
     setDueDate(null);
+    setUrl('');
     onClose();
   };
 
@@ -128,6 +131,19 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
                 Due: {new Date(dueDate).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
               </p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-slate-300 text-sm font-medium mb-1">
+              URL <span className="text-slate-500 font-normal">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
+              placeholder="https://..."
+            />
           </div>
 
           <p className={`text-xs ${hasActiveRoom ? 'text-cyan-400' : 'text-orange-400'}`}>

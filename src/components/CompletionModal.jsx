@@ -76,20 +76,18 @@ const CompletionModal = ({ isOpen, onClose, onDone, taskTitle, loading }) => {
             />
           </div>
 
-          {followUpTitle && (
-            <div>
-              <label className="block text-slate-300 text-sm font-medium mb-1">
-                Follow-up URL <span className="text-slate-500 font-normal">(optional)</span>
-              </label>
-              <input
-                type="text"
-                value={followUpUrl}
-                onChange={(e) => setFollowUpUrl(e.target.value)}
-                className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
-                placeholder="https://..."
-              />
-            </div>
-          )}
+          <div>
+            <label className="block text-slate-300 text-sm font-medium mb-1">
+              Follow-up URL <span className="text-slate-500 font-normal">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={followUpUrl}
+              onChange={(e) => setFollowUpUrl(e.target.value)}
+              className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
+              placeholder="https://..."
+            />
+          </div>
         </div>
 
         <div className="flex justify-end mt-6">
