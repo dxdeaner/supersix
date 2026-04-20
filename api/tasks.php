@@ -46,6 +46,9 @@ switch ($method) {
             case 'duplicate':
                 duplicateTask($pdo);
                 break;
+            case 'move':
+                moveTaskToBoard($pdo);
+                break;
             default:
                 sendResponse(['error' => 'Invalid action'], 400);
         }
@@ -801,6 +804,78 @@ function duplicateTask($pdo) {
         $pdo->rollback();
         error_log("Duplicate task error: " . $e->getMessage());
         sendResponse(['error' => 'Failed to duplicate task'], 500);
+    }
+}
+
+function moveTaskToBoard($pdo) {
+    if (!isset($_SESSION['user_id'])) {
+        sendResponse(['error' => 'Authentication required'], 401);
+    }
+    $userId = $_SESSION['user_id'];
+    $data = getJsonInput();
+    validateRequired($data, ['id', 'targetBoardId']);
+
+    try {
+        $pdo->beginTransaction();
+
+        // Fetch task and verify ownership
+        $stmt = $pdo->prepare("
+            SELECT t.id, t.title, t.status, t.board_id, b.name as board_name
+            FROM tasks t
+            JOIN boards b ON t.board_id = b.id
+            WHERE t.id = ? AND b.user_id = ?
+        ");
+        $stmt->execute([$data['id'], $userId]);
+        $task = $stmt->fetch();
+
+        if (!$task) {
+            sendResponse(['error' => 'Task not found or access denied'], 404);
+        }
+
+        if ((int)$task['board_id'] === (int)$data['targetBoardId']) {
+            sendResponse(['error' => 'Task is already on that board'], 400);
+        }
+
+        // Validate target board — must exist, belong to user, not archived
+        $stmt = $pdo->prepare("SELECT id, name FROM boards WHERE id = ? AND user_id = ? AND archived = 0");
+        $stmt->execute([$data['targetBoardId'], $userId]);
+        $targetBoard = $stmt->fetch();
+
+        if (!$targetBoard) {
+            sendResponse(['error' => 'Target board not found or access denied'], 404);
+        }
+
+        // Determine final status: if active, check room on target board
+        $finalStatus = $task['status'];
+        if ($task['status'] === 'active') {
+            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tasks WHERE board_id = ? AND status = 'active'");
+            $stmt->execute([$data['targetBoardId']]);
+            $activeCount = (int)$stmt->fetch()['count'];
+            if ($activeCount >= MAX_ACTIVE_TASKS) {
+                $finalStatus = 'queued';
+            }
+        }
+
+        // Compute new position (append to end of that status on target board)
+        $stmt = $pdo->prepare("SELECT COALESCE(MAX(position), 0) + 1 as next_pos FROM tasks WHERE board_id = ? AND status = ?");
+        $stmt->execute([$data['targetBoardId'], $finalStatus]);
+        $nextPos = (int)$stmt->fetch()['next_pos'];
+
+        // Move the task
+        $stmt = $pdo->prepare("UPDATE tasks SET board_id = ?, status = ?, position = ? WHERE id = ?");
+        $stmt->execute([$data['targetBoardId'], $finalStatus, $nextPos, $data['id']]);
+
+        // Journal log
+        insertJournalAutoLog($pdo, $userId, 'task_moved',
+            'Moved "' . $task['title'] . '" from ' . $task['board_name'] . ' to ' . $targetBoard['name'],
+            (int)$data['targetBoardId'], $targetBoard['name'], (int)$data['id'], $task['title']);
+
+        $pdo->commit();
+        sendResponse(['message' => 'Task moved successfully', 'status' => $finalStatus]);
+    } catch (PDOException $e) {
+        $pdo->rollback();
+        error_log("Move task to board error: " . $e->getMessage());
+        sendResponse(['error' => 'Failed to move task'], 500);
     }
 }
 

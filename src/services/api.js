@@ -134,6 +134,13 @@ const api = {
     });
   },
 
+  async moveTaskToBoard(taskId, targetBoardId) {
+    return this.request('/tasks.php?action=move', {
+      method: 'POST',
+      body: JSON.stringify({ id: taskId, targetBoardId }),
+    });
+  },
+
   async reorderBoards(orderedIds) {
     return this.request('/boards.php?action=reorder', {
       method: 'POST',

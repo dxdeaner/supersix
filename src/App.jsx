@@ -630,6 +630,15 @@ const App = () => {
     () => [[setTasks, [...tasks]]]
   );
 
+  const moveTaskToBoard = async (taskId, targetBoardId) => {
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    try {
+      await api.moveTaskToBoard(taskId, targetBoardId);
+    } catch {
+      loadTasks(currentBoard);
+    }
+  };
+
   const deleteTask = withOptimistic(
     (taskId) => api.deleteTask(taskId),
     (taskId) => {
@@ -1576,6 +1585,8 @@ const App = () => {
                         isDragOver={dragOverIndex === slotIndex}
                         subtasks={subtasks}
                         onUpdateDueDate={updateTaskDueDate}
+                        boards={boards.filter(b => !b.archived && b.id !== currentBoard)}
+                        onMoveToBoard={moveTaskToBoard}
                       />
                     ) : (
                       <div
@@ -1624,6 +1635,8 @@ const App = () => {
                           subtasks={subtasks}
                           onDragStart={handleDragStart}
                           onDragEnd={handleDragEnd}
+                          boards={boards.filter(b => !b.archived && b.id !== currentBoard)}
+                          onMoveToBoard={moveTaskToBoard}
                         />
                       ))}
                     </div>

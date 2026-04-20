@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import Icon from './Icon';
 
-const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown, onPromote, onDuplicate, canMoveUp, canMoveDown, isMoving, subtasks, onDragStart, onDragEnd }) => {
+const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown, onPromote, onDuplicate, canMoveUp, canMoveDown, isMoving, subtasks, onDragStart, onDragEnd, boards = [], onMoveToBoard }) => {
   const [expanded, setExpanded] = useState(false);
+  const [movingBoard, setMovingBoard] = useState(false);
 
   const handleDragStart = (e) => {
     e.dataTransfer.setData('text/plain', '');
@@ -98,6 +99,32 @@ const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown
           >
             <Icon name="copy" size={14} />
           </button>
+          {boards.length > 0 && onMoveToBoard && (
+            <div className="relative">
+              <button
+                onClick={() => setMovingBoard(v => !v)}
+                className="text-slate-400 hover:text-slate-300 p-1 transition-colors hover:bg-slate-600/50 rounded"
+                title="Move to board"
+                aria-label="Move to board"
+              >
+                <Icon name="log-in" size={14} />
+              </button>
+              {movingBoard && (
+                <div className="absolute bottom-full mb-1 right-0 bg-slate-700 border border-slate-600 rounded-lg shadow-xl z-50 min-w-[140px]">
+                  {boards.map(b => (
+                    <button
+                      key={b.id}
+                      onClick={() => { onMoveToBoard(task.id, b.id); setMovingBoard(false); }}
+                      className="w-full px-3 py-2 text-left text-xs text-slate-300 hover:bg-slate-600 hover:text-white first:rounded-t-lg last:rounded-b-lg"
+                    >
+                      {b.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <button
             onClick={() => onDelete(task.id)}
             className="text-red-400 hover:text-red-300 p-1 transition-colors hover:bg-red-400/10 rounded"
