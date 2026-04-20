@@ -72,6 +72,10 @@ const App = () => {
   const [draggedFromIndex, setDraggedFromIndex] = useState(null);
   const [dragSource, setDragSource] = useState(null); // 'active' | 'queue'
 
+  // Board drag and drop state
+  const [draggedBoardId, setDraggedBoardId] = useState(null);
+  const [dragOverBoardId, setDragOverBoardId] = useState(null);
+
   // Completion animation state
   const [completingTask, setCompletingTask] = useState(null);
   const [showCompletionModal, setShowCompletionModal] = useState(null);
@@ -125,6 +129,51 @@ const App = () => {
       await promoteTask(draggedTask);
     }
     handleDragEnd();
+  };
+
+  // Board drag and drop handlers
+  const handleBoardDragStart = (e, boardId) => {
+    setDraggedBoardId(boardId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleBoardDragOver = (e, boardId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (boardId !== draggedBoardId) {
+      setDragOverBoardId(boardId);
+    }
+  };
+
+  const handleBoardDragEnd = () => {
+    setDraggedBoardId(null);
+    setDragOverBoardId(null);
+  };
+
+  const handleBoardDrop = async (e, targetBoardId) => {
+    e.preventDefault();
+    if (!draggedBoardId || draggedBoardId === targetBoardId) {
+      handleBoardDragEnd();
+      return;
+    }
+    const visibleBoards = boards.filter(b => !b.archived);
+    const fromIndex = visibleBoards.findIndex(b => b.id === draggedBoardId);
+    const toIndex = visibleBoards.findIndex(b => b.id === targetBoardId);
+    if (fromIndex === -1 || toIndex === -1) {
+      handleBoardDragEnd();
+      return;
+    }
+    const reordered = [...visibleBoards];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    const archivedBoards = boards.filter(b => b.archived);
+    setBoards([...reordered, ...archivedBoards]);
+    handleBoardDragEnd();
+    try {
+      await api.reorderBoards(reordered.map(b => b.id));
+    } catch {
+      setBoards(boards);
+    }
   };
 
   // Subtask state
@@ -1043,7 +1092,18 @@ const App = () => {
         <div className="p-4 relative">
           <div className="space-y-2">
             {boards.filter(board => !board.archived).map(board => (
-              <div key={board.id} className="relative board-menu-container">
+              <div
+                key={board.id}
+                className={`relative board-menu-container transition-opacity ${draggedBoardId === board.id ? 'opacity-40' : 'opacity-100'}`}
+                draggable={true}
+                onDragStart={(e) => handleBoardDragStart(e, board.id)}
+                onDragOver={(e) => handleBoardDragOver(e, board.id)}
+                onDragEnd={handleBoardDragEnd}
+                onDrop={(e) => handleBoardDrop(e, board.id)}
+              >
+                {dragOverBoardId === board.id && draggedBoardId !== board.id && (
+                  <div className="absolute inset-x-0 top-0 h-0.5 bg-cyan-400 rounded-full z-10" />
+                )}
                 <div className={`flex items-center justify-between p-3 rounded-lg transition-colors ${board.id === currentBoard
                   ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-600/20'
                   : 'text-slate-300 hover:bg-slate-700 hover:text-white'

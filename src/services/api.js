@@ -134,6 +134,13 @@ const api = {
     });
   },
 
+  async reorderBoards(orderedIds) {
+    return this.request('/boards.php?action=reorder', {
+      method: 'POST',
+      body: JSON.stringify({ orderedIds }),
+    });
+  },
+
   // Task endpoints
   async getTasks(boardId) {
     return this.request(`/tasks.php?board_id=${boardId}`);

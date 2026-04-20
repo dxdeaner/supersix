@@ -20,7 +20,11 @@ switch ($method) {
         getBoards($pdo);
         break;
     case 'POST':
-        createBoard($pdo);
+        if (($_GET['action'] ?? '') === 'reorder') {
+            reorderBoards($pdo);
+        } else {
+            createBoard($pdo);
+        }
         break;
     case 'PUT':
         updateBoard($pdo);
@@ -47,7 +51,7 @@ function getBoards($pdo) {
             LEFT JOIN tasks t ON b.id = t.board_id
             WHERE b.user_id = ?
             GROUP BY b.id
-            ORDER BY b.created_at ASC
+            ORDER BY b.position ASC, b.created_at ASC
         ");
         $stmt->execute([$userId]);
         $boards = $stmt->fetchAll();
@@ -85,9 +89,13 @@ function createBoard($pdo) {
     ]);
 
     try {
+        $posStmt = $pdo->prepare("SELECT COALESCE(MAX(position), 0) + 1 FROM boards WHERE user_id = ?");
+        $posStmt->execute([$userId]);
+        $nextPosition = (int)$posStmt->fetchColumn();
+
         $stmt = $pdo->prepare("
-            INSERT INTO boards (user_id, name, color, archived)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO boards (user_id, name, color, archived, position)
+            VALUES (?, ?, ?, ?, ?)
         ");
 
         $allowedColors = ['cyan', 'green', 'blue', 'purple', 'pink', 'yellow'];
@@ -99,7 +107,8 @@ function createBoard($pdo) {
             $userId,
             trim($data['name']),
             $color,
-            false
+            false,
+            $nextPosition
         ]);
         
         $boardId = $pdo->lastInsertId();
@@ -182,6 +191,29 @@ function updateBoard($pdo) {
     } catch (PDOException $e) {
         error_log("Update board error: " . $e->getMessage());
         sendResponse(['error' => 'Failed to update board'], 500);
+    }
+}
+
+function reorderBoards($pdo) {
+    if (!isset($_SESSION['user_id'])) {
+        sendResponse(['error' => 'Authentication required'], 401);
+    }
+    $userId = $_SESSION['user_id'];
+    $data = getJsonInput();
+
+    if (empty($data['orderedIds']) || !is_array($data['orderedIds'])) {
+        sendResponse(['error' => 'orderedIds array is required'], 400);
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE boards SET position = ? WHERE id = ? AND user_id = ?");
+        foreach ($data['orderedIds'] as $index => $boardId) {
+            $stmt->execute([$index + 1, (int)$boardId, $userId]);
+        }
+        sendResponse(['message' => 'Boards reordered successfully']);
+    } catch (PDOException $e) {
+        error_log("Reorder boards error: " . $e->getMessage());
+        sendResponse(['error' => 'Failed to reorder boards'], 500);
     }
 }
 
