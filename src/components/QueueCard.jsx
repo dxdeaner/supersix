@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import Icon from './Icon';
 
+const getDueDateColor = (dueDate) => {
+  const now = new Date();
+  const due = new Date(dueDate);
+  if (due < now) return 'bg-red-500';
+  if (due - now < 24 * 60 * 60 * 1000) return 'bg-orange-500';
+  return 'bg-green-600';
+};
+
 const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown, onPromote, onDuplicate, canMoveUp, canMoveDown, isMoving, subtasks, onDragStart, onDragEnd, boards = [], onMoveToBoard }) => {
   const [expanded, setExpanded] = useState(false);
   const [movingBoard, setMovingBoard] = useState(false);
@@ -38,7 +46,7 @@ const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown
                 {new Date(task.dueDate) < new Date() && (
                   <span className="text-red-400 font-bold text-sm" aria-label="Overdue" role="img">!</span>
                 )}
-                <div className={`${new Date(task.dueDate) < new Date() ? 'bg-red-500' : 'bg-orange-500'} text-white px-2 py-1 rounded-full text-xs font-medium`}>
+                <div className={`${getDueDateColor(task.dueDate)} text-white px-2 py-1 rounded-full text-xs font-medium`}>
                   {new Date(task.dueDate).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                 </div>
               </div>

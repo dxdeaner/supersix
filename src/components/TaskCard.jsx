@@ -14,6 +14,14 @@ const CONFETTI_PIECES = Array.from({ length: 12 }, (_, i) => {
   };
 });
 
+const getDueDateColor = (dueDate) => {
+  const now = new Date();
+  const due = new Date(dueDate);
+  if (due < now) return 'bg-red-500';
+  if (due - now < 24 * 60 * 60 * 1000) return 'bg-orange-500';
+  return 'bg-green-600';
+};
+
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const hour = Math.floor(i / 2);
   const minute = (i % 2) * 30;
@@ -146,7 +154,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
                 {new Date(task.dueDate) < new Date() && (
                   <span className="text-red-400 font-bold text-sm" aria-label="Overdue" role="img">!</span>
                 )}
-                <div className={`${new Date(task.dueDate) < new Date() ? 'bg-red-500' : 'bg-orange-500'} text-white px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1`}>
+                <div className={`${getDueDateColor(task.dueDate)} text-white px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1`}>
                   <span>{new Date(task.dueDate).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
                   <Icon name="edit-3" size={10} className="opacity-0 group-hover/due:opacity-100 transition-opacity" />
                 </div>
