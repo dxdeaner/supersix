@@ -147,7 +147,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
                   <span className="text-red-400 font-bold text-sm" aria-label="Overdue" role="img">!</span>
                 )}
                 <div className={`${new Date(task.dueDate) < new Date() ? 'bg-red-500' : 'bg-orange-500'} text-white px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1`}>
-                  <span>{new Date(task.dueDate).toLocaleString()}</span>
+                  <span>{new Date(task.dueDate).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
                   <Icon name="edit-3" size={10} className="opacity-0 group-hover/due:opacity-100 transition-opacity" />
                 </div>
               </div>

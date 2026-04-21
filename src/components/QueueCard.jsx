@@ -39,7 +39,7 @@ const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown
                   <span className="text-red-400 font-bold text-sm" aria-label="Overdue" role="img">!</span>
                 )}
                 <div className={`${new Date(task.dueDate) < new Date() ? 'bg-red-500' : 'bg-orange-500'} text-white px-2 py-1 rounded-full text-xs font-medium`}>
-                  {new Date(task.dueDate).toLocaleString()}
+                  {new Date(task.dueDate).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                 </div>
               </div>
             )}

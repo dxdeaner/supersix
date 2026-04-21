@@ -2142,7 +2142,7 @@ const App = () => {
                   >
                     <Icon name="clock" size={14} />
                     <span className={`text-sm ${new Date(viewingTask.dueDate) < new Date() ? 'text-red-400' : 'text-slate-300'}`}>
-                      {new Date(viewingTask.dueDate).toLocaleString()}
+                      {new Date(viewingTask.dueDate).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                     </span>
                     <Icon name="edit-3" size={12} className="text-slate-500 opacity-0 group-hover/due:opacity-100 transition-opacity" />
                   </div>
