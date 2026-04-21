@@ -781,7 +781,7 @@ const App = () => {
       id: task.id,
       title: task.title,
       description: task.description || '',
-      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '',
+      dueDate: task.dueDate ? task.dueDate.slice(0, 16) : '',
       url: task.url || '',
     });
 
