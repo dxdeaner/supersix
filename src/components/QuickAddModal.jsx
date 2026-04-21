@@ -25,6 +25,7 @@ const QUICK_DATES = [
 
 const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
   const [newTask, setNewTask] = useState('');
+  const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState(null);
   const [url, setUrl] = useState('');
   const dialogRef = useRef(null);
@@ -40,8 +41,9 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
 
   const handleAdd = () => {
     if (newTask.trim()) {
-      onAdd(newTask.trim(), dueDate, url.trim() || null);
+      onAdd(newTask.trim(), dueDate, url.trim() || null, description.trim() || '');
       setNewTask('');
+      setDescription('');
       setDueDate(null);
       setUrl('');
       onClose();
@@ -50,6 +52,7 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
 
   const handleClose = () => {
     setNewTask('');
+    setDescription('');
     setDueDate(null);
     setUrl('');
     onClose();
@@ -101,6 +104,19 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
               onKeyPress={handleKeyPress}
               className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400"
               placeholder="What needs to get done?"
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-300 text-sm font-medium mb-1">
+              Description <span className="text-slate-500 font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 resize-none"
+              placeholder="Optional description..."
             />
           </div>
 

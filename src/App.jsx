@@ -1965,11 +1965,11 @@ const App = () => {
       <QuickAddModal
         isOpen={showQuickAddModal}
         onClose={() => setShowQuickAddModal(false)}
-        onAdd={async (taskTitle, dueDate, url) => {
+        onAdd={async (taskTitle, dueDate, url, description) => {
           if (currentBoard) {
             try {
               const activeCount = tasks.filter(t => t.status === 'active').length;
-              const result = await api.createTask(currentBoard, taskTitle, '', dueDate, url);
+              const result = await api.createTask(currentBoard, taskTitle, description, dueDate, url);
               // Auto-promote if there's room in active focus
               if (activeCount < MAX_ACTIVE_TASKS && result && result.id) {
                 await api.promoteTask(result.id);
