@@ -705,6 +705,15 @@ function undoCompleteTask($pdo) {
             $stmt->execute([$nextPos, $data['id']]);
         }
         
+        // Remove the auto-logged completion journal entry for this task
+        $stmt = $pdo->prepare("
+            DELETE FROM journal_entries
+            WHERE task_id = ? AND user_id = ? AND auto_type = 'task_completed'
+            ORDER BY created_at DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$data['id'], $userId]);
+
         $pdo->commit();
         sendResponse(['message' => 'Task restored successfully']);
     } catch (PDOException $e) {
