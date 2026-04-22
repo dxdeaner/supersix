@@ -1957,6 +1957,11 @@ const App = () => {
         isOpen={showCompletionModal !== null}
         onClose={() => handleCompletionDone({ result: '', followUpTitle: '' })}
         onDone={handleCompletionDone}
+        onUndo={() => {
+          const taskId = showCompletionModal;
+          setShowCompletionModal(null);
+          undoComplete(taskId);
+        }}
         taskTitle={showCompletionModal ? (tasks.find(t => t.id === showCompletionModal)?.title || '') : ''}
         loading={loading}
       />

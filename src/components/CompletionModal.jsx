@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import Icon from './Icon';
 import useFocusTrap from '../hooks/useFocusTrap';
 
-const CompletionModal = ({ isOpen, onClose, onDone, taskTitle, loading }) => {
+const CompletionModal = ({ isOpen, onClose, onDone, onUndo, taskTitle, loading }) => {
   const [result, setResult] = useState('');
   const [followUpTitle, setFollowUpTitle] = useState('');
   const [followUpUrl, setFollowUpUrl] = useState('');
@@ -90,7 +90,15 @@ const CompletionModal = ({ isOpen, onClose, onDone, taskTitle, loading }) => {
           </div>
         </div>
 
-        <div className="flex justify-end mt-6">
+        <div className="flex justify-between mt-6">
+          <button
+            onClick={onUndo}
+            disabled={loading}
+            className="px-4 py-2 bg-slate-600 hover:bg-slate-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded font-medium transition-colors flex items-center gap-2"
+          >
+            <Icon name="rotate-ccw" size={14} />
+            Undo
+          </button>
           <button
             onClick={handleDone}
             disabled={loading}
