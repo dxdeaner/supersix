@@ -499,14 +499,6 @@ function promoteTask($pdo) {
             $stmt->execute([$data['id']]);
         }
         
-        // Auto-log: task promoted
-        $infoStmt = $pdo->prepare("SELECT t.title, b.name as board_name FROM tasks t JOIN boards b ON t.board_id = b.id WHERE t.id = ?");
-        $infoStmt->execute([$data['id']]);
-        $info = $infoStmt->fetch();
-        insertJournalAutoLog($pdo, $userId, 'task_promoted',
-            'Promoted "' . $info['title'] . '" to active on ' . $info['board_name'],
-            (int)$task['board_id'], $info['board_name'], (int)$data['id'], $info['title']);
-
         $pdo->commit();
         sendResponse(['message' => 'Task promoted successfully']);
     } catch (PDOException $e) {

@@ -140,10 +140,17 @@ const CustomTooltipBar = ({ active, payload, label }) => {
 };
 
 const TAG_STYLES = {
-  win:        'bg-green-500/20 text-green-400 border-green-500/30',
-  blocker:    'bg-red-500/20 text-red-400 border-red-500/30',
-  idea:       'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-  reflection: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  blocker:     'bg-red-500/20 text-red-400 border-red-500/30',
+  decision:    'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  delegated:   'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  idea:        'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  learning:    'bg-teal-500/20 text-teal-400 border-teal-500/30',
+  meeting:     'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+  note:        'bg-slate-400/20 text-slate-300 border-slate-400/30',
+  opportunity: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+  reflection:  'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  waiting:     'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  win:         'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
 };
 
 // ─── Main component ──────────────────────────────────────────────────────────

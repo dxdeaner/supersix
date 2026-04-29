@@ -1063,10 +1063,17 @@ const App = () => {
 
   // Journal tag styles (full class names for Tailwind detection)
   const tagStyles = {
-    blocker: { pill: 'bg-red-500/20 text-red-300', active: 'bg-red-500/20 border-red-500/50 text-red-300' },
-    win: { pill: 'bg-emerald-500/20 text-emerald-300', active: 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300' },
-    idea: { pill: 'bg-yellow-500/20 text-yellow-300', active: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300' },
-    reflection: { pill: 'bg-blue-500/20 text-blue-300', active: 'bg-blue-500/20 border-blue-500/50 text-blue-300' },
+    blocker:     { pill: 'bg-red-500/20 text-red-300',     active: 'bg-red-500/20 border-red-500/50 text-red-300' },
+    decision:    { pill: 'bg-purple-500/20 text-purple-300', active: 'bg-purple-500/20 border-purple-500/50 text-purple-300' },
+    delegated:   { pill: 'bg-orange-500/20 text-orange-300', active: 'bg-orange-500/20 border-orange-500/50 text-orange-300' },
+    idea:        { pill: 'bg-yellow-500/20 text-yellow-300', active: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300' },
+    learning:    { pill: 'bg-teal-500/20 text-teal-300',   active: 'bg-teal-500/20 border-teal-500/50 text-teal-300' },
+    meeting:     { pill: 'bg-indigo-500/20 text-indigo-300', active: 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300' },
+    note:        { pill: 'bg-slate-400/20 text-slate-300',  active: 'bg-slate-400/20 border-slate-400/50 text-slate-300' },
+    opportunity: { pill: 'bg-cyan-500/20 text-cyan-300',   active: 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300' },
+    reflection:  { pill: 'bg-blue-500/20 text-blue-300',   active: 'bg-blue-500/20 border-blue-500/50 text-blue-300' },
+    waiting:     { pill: 'bg-amber-500/20 text-amber-300',  active: 'bg-amber-500/20 border-amber-500/50 text-amber-300' },
+    win:         { pill: 'bg-emerald-500/20 text-emerald-300', active: 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300' },
   };
 
   // Filter tasks by status
@@ -1898,10 +1905,17 @@ const App = () => {
                               />
                               <div className="flex flex-wrap gap-2 mb-2">
                                 {[
-                                  { value: 'blocker', label: 'Blocker' },
-                                  { value: 'win', label: 'Win' },
-                                  { value: 'idea', label: 'Idea' },
-                                  { value: 'reflection', label: 'Reflection' },
+                                  { value: 'blocker',     label: 'Blocker' },
+                                  { value: 'decision',    label: 'Decision' },
+                                  { value: 'delegated',   label: 'Delegated' },
+                                  { value: 'idea',        label: 'Idea' },
+                                  { value: 'learning',    label: 'Learning' },
+                                  { value: 'meeting',     label: 'Meeting' },
+                                  { value: 'note',        label: 'Note' },
+                                  { value: 'opportunity', label: 'Opportunity' },
+                                  { value: 'reflection',  label: 'Reflection' },
+                                  { value: 'waiting',     label: 'Waiting' },
+                                  { value: 'win',         label: 'Win' },
                                 ].map(({ value, label }) => (
                                   <button
                                     key={value}
@@ -2021,10 +2035,17 @@ const App = () => {
               {/* Tag selector */}
               <div className="flex flex-wrap gap-2 mt-2">
                 {[
-                  { value: 'blocker', label: 'Blocker' },
-                  { value: 'win', label: 'Win' },
-                  { value: 'idea', label: 'Idea' },
-                  { value: 'reflection', label: 'Reflection' },
+                  { value: 'blocker',     label: 'Blocker' },
+                  { value: 'decision',    label: 'Decision' },
+                  { value: 'delegated',   label: 'Delegated' },
+                  { value: 'idea',        label: 'Idea' },
+                  { value: 'learning',    label: 'Learning' },
+                  { value: 'meeting',     label: 'Meeting' },
+                  { value: 'note',        label: 'Note' },
+                  { value: 'opportunity', label: 'Opportunity' },
+                  { value: 'reflection',  label: 'Reflection' },
+                  { value: 'waiting',     label: 'Waiting' },
+                  { value: 'win',         label: 'Win' },
                 ].map(({ value, label }) => (
                   <button
                     key={value}

@@ -45,7 +45,7 @@ function getEntries($pdo) {
         $stmt = $pdo->prepare("
             SELECT id, entry_type, tag, auto_type, content, board_id, board_name, task_id, task_title, created_at, updated_at
             FROM journal_entries
-            WHERE user_id = ?
+            WHERE user_id = ? AND (auto_type IS NULL OR auto_type != 'task_promoted')
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
         ");
@@ -93,7 +93,7 @@ function createEntry($pdo) {
     ]);
 
     // Validate tag if provided
-    $allowedTags = ['blocker', 'win', 'idea', 'reflection'];
+    $allowedTags = ['blocker', 'decision', 'delegated', 'idea', 'learning', 'meeting', 'note', 'opportunity', 'reflection', 'waiting', 'win'];
     $tag = isset($data['tag']) && in_array($data['tag'], $allowedTags, true) ? $data['tag'] : null;
 
     try {
@@ -144,7 +144,7 @@ function updateEntry($pdo) {
     ]);
 
     // Validate tag if provided
-    $allowedTags = ['blocker', 'win', 'idea', 'reflection'];
+    $allowedTags = ['blocker', 'decision', 'delegated', 'idea', 'learning', 'meeting', 'note', 'opportunity', 'reflection', 'waiting', 'win'];
     $tag = isset($data['tag']) && in_array($data['tag'], $allowedTags, true) ? $data['tag'] : null;
 
     try {
