@@ -15,6 +15,7 @@ import OfflineIndicator from './components/OfflineIndicator';
 import ReloadPrompt from './components/ReloadPrompt';
 import ReportView from './components/ReportView';
 import useFocusTrap from './hooks/useFocusTrap';
+import { useNotifications } from './hooks/useNotifications';
 
 const App = () => {
   // Haiku collection
@@ -258,6 +259,7 @@ const App = () => {
   const [boards, setBoards] = useState([]);
   const [currentBoard, setCurrentBoard] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const { permission: notifPermission, requestPermission: requestNotifPermission } = useNotifications(tasks);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -297,6 +299,9 @@ const App = () => {
   const [reportData, setReportData] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
 
+  // Due summary state
+  const [dueSummary, setDueSummary] = useState({ today: 0, tomorrow: 0, thisWeek: 0 });
+
   const loadReport = async (start, end) => {
     setReportLoading(true);
     try {
@@ -307,6 +312,13 @@ const App = () => {
     } finally {
       setReportLoading(false);
     }
+  };
+
+  const loadDueSummary = async () => {
+    try {
+      const data = await api.getDueSummary();
+      setDueSummary(data);
+    } catch { /* silent fail */ }
   };
 
   // Auto-load subtasks for all tasks when tasks change
@@ -411,6 +423,11 @@ const App = () => {
     ));
   }, [tasks, currentBoard]);
 
+  // Refresh due summary whenever tasks on the current board change
+  useEffect(() => {
+    if (user) loadDueSummary();
+  }, [tasks]);
+
   // Handle window resize
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -489,6 +506,7 @@ const App = () => {
       setLoading(true);
       const boardsData = await api.getBoards();
       setBoards(boardsData);
+      loadDueSummary();
       if (boardsData.length > 0 && !currentBoard) {
         switchBoard(boardsData[0].id);
       }
@@ -1240,43 +1258,60 @@ const App = () => {
 
         {/* Mobile Header */}
         {windowWidth < DESKTOP_BREAKPOINT && (
-          <div className="flex items-center justify-between p-4 bg-slate-800 border-b border-slate-700 shrink-0">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="text-slate-400 hover:text-white"
-              aria-label="Open sidebar menu"
-            >
-              <Icon name="menu" size={24} />
-            </button>
-            <img src="/SuperSix-Logo.png" alt="SuperSix" className="h-8" />
-            <div className="flex items-center gap-2">
-              {user && (
-                <>
-                  <button
-                    onClick={() => { setViewMode(viewMode === 'journal' ? 'board' : 'journal'); }}
-                    className={`p-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
-                    aria-label="Toggle journal"
-                    aria-pressed={viewMode === 'journal'}
-                  >
-                    <Icon name="book-open" size={18} />
-                  </button>
-                  <button
-                    onClick={() => { setViewMode(viewMode === 'report' ? 'board' : 'report'); }}
-                    className={`p-2 rounded-lg transition-colors ${viewMode === 'report' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
-                    aria-label="Toggle report"
-                    aria-pressed={viewMode === 'report'}
-                  >
-                    <Icon name="bar-chart-2" size={18} />
-                  </button>
-                </>
-              )}
-              <UserHeader
-                user={user}
-                onLogout={handleLogout}
-                onOpenAuth={() => setShowAuthModal(true)}
-              />
+          <>
+            <div className="flex items-center justify-between p-4 bg-slate-800 border-b border-slate-700 shrink-0">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="text-slate-400 hover:text-white"
+                aria-label="Open sidebar menu"
+              >
+                <Icon name="menu" size={24} />
+              </button>
+              <img src="/SuperSix-Logo.png" alt="SuperSix" className="h-8" />
+              <div className="flex items-center gap-2">
+                {user && (
+                  <>
+                    <button
+                      onClick={() => { setViewMode(viewMode === 'journal' ? 'board' : 'journal'); }}
+                      className={`p-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                      aria-label="Toggle journal"
+                      aria-pressed={viewMode === 'journal'}
+                    >
+                      <Icon name="book-open" size={18} />
+                    </button>
+                    <button
+                      onClick={() => { setViewMode(viewMode === 'report' ? 'board' : 'report'); }}
+                      className={`p-2 rounded-lg transition-colors ${viewMode === 'report' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                      aria-label="Toggle report"
+                      aria-pressed={viewMode === 'report'}
+                    >
+                      <Icon name="bar-chart-2" size={18} />
+                    </button>
+                  </>
+                )}
+                <UserHeader
+                  user={user}
+                  onLogout={handleLogout}
+                  onOpenAuth={() => setShowAuthModal(true)}
+                  notifPermission={notifPermission}
+                  requestNotifPermission={requestNotifPermission}
+                />
+              </div>
             </div>
-          </div>
+            {user && (dueSummary.today > 0 || dueSummary.tomorrow > 0 || dueSummary.thisWeek > 0) && (
+              <div className="flex items-center justify-center gap-4 px-4 py-1.5 bg-slate-800 border-b border-slate-700 text-xs shrink-0">
+                {dueSummary.today > 0 && (
+                  <span className="text-red-400 font-medium">Today <span className="font-bold">{dueSummary.today}</span></span>
+                )}
+                {dueSummary.tomorrow > 0 && (
+                  <span className="text-amber-400 font-medium">Tomorrow <span className="font-bold">{dueSummary.tomorrow}</span></span>
+                )}
+                {dueSummary.thisWeek > 0 && (
+                  <span className="text-slate-400 font-medium">This week <span className="font-bold">{dueSummary.thisWeek}</span></span>
+                )}
+              </div>
+            )}
+          </>
         )}
 
         {/* Desktop Header */}
@@ -1288,34 +1323,51 @@ const App = () => {
                 {selectedHaiku}
               </p>
             </div>
-            <div className="absolute right-6 top-6 flex items-center gap-3">
-              {user && (
-                <>
-                  <button
-                    onClick={() => { setViewMode(viewMode === 'journal' ? 'board' : 'journal'); }}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
-                    aria-label="Toggle journal"
-                    aria-pressed={viewMode === 'journal'}
-                  >
-                    <Icon name="book-open" size={16} />
-                    <span className="text-sm font-medium">Journal</span>
-                  </button>
-                  <button
-                    onClick={() => { setViewMode(viewMode === 'report' ? 'board' : 'report'); }}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${viewMode === 'report' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
-                    aria-label="Toggle report"
-                    aria-pressed={viewMode === 'report'}
-                  >
-                    <Icon name="bar-chart-2" size={16} />
-                    <span className="text-sm font-medium">Report</span>
-                  </button>
-                </>
+            <div className="absolute right-6 top-6 flex flex-col items-end gap-2">
+              <div className="flex items-center gap-3">
+                {user && (
+                  <>
+                    <button
+                      onClick={() => { setViewMode(viewMode === 'journal' ? 'board' : 'journal'); }}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                      aria-label="Toggle journal"
+                      aria-pressed={viewMode === 'journal'}
+                    >
+                      <Icon name="book-open" size={16} />
+                      <span className="text-sm font-medium">Journal</span>
+                    </button>
+                    <button
+                      onClick={() => { setViewMode(viewMode === 'report' ? 'board' : 'report'); }}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${viewMode === 'report' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                      aria-label="Toggle report"
+                      aria-pressed={viewMode === 'report'}
+                    >
+                      <Icon name="bar-chart-2" size={16} />
+                      <span className="text-sm font-medium">Report</span>
+                    </button>
+                  </>
+                )}
+                <UserHeader
+                  user={user}
+                  onLogout={handleLogout}
+                  onOpenAuth={() => setShowAuthModal(true)}
+                  notifPermission={notifPermission}
+                  requestNotifPermission={requestNotifPermission}
+                />
+              </div>
+              {user && (dueSummary.today > 0 || dueSummary.tomorrow > 0 || dueSummary.thisWeek > 0) && (
+                <div className="flex items-center gap-3 text-xs">
+                  {dueSummary.today > 0 && (
+                    <span className="text-red-400 font-medium">Today <span className="font-bold">{dueSummary.today}</span></span>
+                  )}
+                  {dueSummary.tomorrow > 0 && (
+                    <span className="text-amber-400 font-medium">Tomorrow <span className="font-bold">{dueSummary.tomorrow}</span></span>
+                  )}
+                  {dueSummary.thisWeek > 0 && (
+                    <span className="text-slate-400 font-medium">This week <span className="font-bold">{dueSummary.thisWeek}</span></span>
+                  )}
+                </div>
               )}
-              <UserHeader
-                user={user}
-                onLogout={handleLogout}
-                onOpenAuth={() => setShowAuthModal(true)}
-              />
             </div>
           </div>
         )}

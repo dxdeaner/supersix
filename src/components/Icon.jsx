@@ -28,6 +28,7 @@ const iconPaths = {
   'log-in': 'M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3',
   'check-circle': 'M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3',
   'bar-chart-2': 'M18 20V10M12 20V4M6 20v-6',
+  'bell': 'M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0',
 };
 
 const Icon = ({ name, size = 16, className = '', ...props }) => (

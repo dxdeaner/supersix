@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Icon from './Icon';
 import api from '../services/api';
 
-const UserHeader = ({ user, onLogout, onOpenAuth }) => {
+const UserHeader = ({ user, onLogout, onOpenAuth, notifPermission, requestNotifPermission }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -62,6 +62,30 @@ const UserHeader = ({ user, onLogout, onOpenAuth }) => {
               <p className="text-orange-400 text-xs mt-1">Email not verified</p>
             )}
           </div>
+          {'Notification' in window && (
+            <div className="border-b border-slate-600">
+              {notifPermission === 'granted' ? (
+                <div className="px-3 py-2 flex items-center space-x-2 text-green-400 text-sm">
+                  <Icon name="bell" size={14} />
+                  <span>Notifications on</span>
+                </div>
+              ) : notifPermission === 'denied' ? (
+                <div className="px-3 py-2 flex items-center space-x-2 text-slate-400 text-sm">
+                  <Icon name="bell" size={14} />
+                  <span>Notifications blocked in browser</span>
+                </div>
+              ) : (
+                <button
+                  onClick={requestNotifPermission}
+                  className="w-full px-3 py-2 text-left text-slate-300 hover:bg-slate-600 hover:text-white flex items-center space-x-2 text-sm"
+                  role="menuitem"
+                >
+                  <Icon name="bell" size={14} />
+                  <span>Enable notifications</span>
+                </button>
+              )}
+            </div>
+          )}
           <button
             onClick={handleLogout}
             className="w-full px-3 py-2 text-left text-slate-300 hover:bg-slate-600 hover:text-white flex items-center space-x-2 rounded-b-lg"
