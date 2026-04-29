@@ -132,6 +132,7 @@ function getDueSummary($pdo) {
     try {
         $stmt = $pdo->prepare("
             SELECT
+                SUM(CASE WHEN DATE(t.due_date) < CURDATE() THEN 1 ELSE 0 END) AS overdue,
                 SUM(CASE WHEN DATE(t.due_date) = CURDATE() THEN 1 ELSE 0 END) AS today,
                 SUM(CASE WHEN DATE(t.due_date) = DATE_ADD(CURDATE(), INTERVAL 1 DAY) THEN 1 ELSE 0 END) AS tomorrow,
                 SUM(CASE WHEN DATE(t.due_date) <= DATE_ADD(CURDATE(), INTERVAL (7 - DAYOFWEEK(CURDATE())) DAY) THEN 1 ELSE 0 END) AS this_week
@@ -146,6 +147,7 @@ function getDueSummary($pdo) {
         $row = $stmt->fetch();
 
         sendResponse([
+            'overdue'  => (int)($row['overdue'] ?? 0),
             'today'    => (int)($row['today'] ?? 0),
             'tomorrow' => (int)($row['tomorrow'] ?? 0),
             'thisWeek' => (int)($row['this_week'] ?? 0),
