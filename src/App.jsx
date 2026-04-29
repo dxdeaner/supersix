@@ -2059,17 +2059,7 @@ const App = () => {
         isOpen={showCompletionModal !== null}
         onClose={() => handleCompletionDone({ result: '', followUpTitle: '' })}
         onDone={handleCompletionDone}
-        onUndo={() => {
-          const taskId = showCompletionModal;
-          setShowCompletionModal(null);
-          undoComplete(taskId);
-          // Optimistically remove the task_completed journal entry for this task
-          setJournalEntries(prev => {
-            const idx = prev.findIndex(e => e.taskId === taskId && e.autoType === 'task_completed');
-            if (idx === -1) return prev;
-            return prev.filter((_, i) => i !== idx);
-          });
-        }}
+        onUndo={() => setShowCompletionModal(null)}
         taskTitle={showCompletionModal ? (tasks.find(t => t.id === showCompletionModal)?.title || '') : ''}
         loading={loading}
       />
