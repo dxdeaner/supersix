@@ -134,8 +134,7 @@ function getDueSummary($pdo) {
             SELECT
                 SUM(CASE WHEN DATE(t.due_date) = CURDATE() THEN 1 ELSE 0 END) AS today,
                 SUM(CASE WHEN DATE(t.due_date) = DATE_ADD(CURDATE(), INTERVAL 1 DAY) THEN 1 ELSE 0 END) AS tomorrow,
-                SUM(CASE WHEN DATE(t.due_date) > DATE_ADD(CURDATE(), INTERVAL 1 DAY)
-                          AND DATE(t.due_date) <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS this_week
+                SUM(CASE WHEN DATE(t.due_date) <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS this_week
             FROM tasks t
             JOIN boards b ON t.board_id = b.id
             WHERE b.user_id = ?
