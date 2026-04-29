@@ -67,6 +67,11 @@ function getPresetRange(preset) {
     const last = new Date(now.getFullYear(), now.getMonth(), 0);
     return { start: fmt(first), end: fmt(last) };
   }
+  if (preset === 'last-7-days') {
+    const start = new Date(now);
+    start.setDate(now.getDate() - 6);
+    return { start: fmt(start), end: today };
+  }
   return { start: '', end: '' };
 }
 
@@ -220,6 +225,7 @@ const ReportView = ({ reportData, reportLoading, onLoad }) => {
 
   const presets = [
     { id: 'today', label: 'Today' },
+    { id: 'last-7-days', label: 'Last 7 Days' },
     { id: 'this-week', label: 'This Week' },
     { id: 'last-week', label: 'Last Week' },
     { id: 'this-month', label: 'This Month' },
