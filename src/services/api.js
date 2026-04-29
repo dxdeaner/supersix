@@ -289,6 +289,10 @@ const api = {
   async getReport(start, end) {
     return this.request(`/report.php?start=${start}&end=${end}`);
   },
+
+  async getDueSummary() {
+    return this.request('/tasks.php?action=due_summary');
+  },
 };
 
 export default api;

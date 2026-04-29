@@ -17,7 +17,12 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
     case 'GET':
-        getTasks($pdo);
+        $action = $_GET['action'] ?? '';
+        if ($action === 'due_summary') {
+            getDueSummary($pdo);
+        } else {
+            getTasks($pdo);
+        }
         break;
     case 'POST':
         $action = $_GET['action'] ?? 'create';
@@ -115,6 +120,40 @@ function getTasks($pdo) {
     } catch (PDOException $e) {
         error_log("Get tasks error: " . $e->getMessage());
         sendResponse(['error' => 'Failed to fetch tasks'], 500);
+    }
+}
+
+function getDueSummary($pdo) {
+    if (!isset($_SESSION['user_id'])) {
+        sendResponse(['error' => 'Authentication required'], 401);
+    }
+    $userId = $_SESSION['user_id'];
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT
+                SUM(CASE WHEN DATE(t.due_date) = CURDATE() THEN 1 ELSE 0 END) AS today,
+                SUM(CASE WHEN DATE(t.due_date) = DATE_ADD(CURDATE(), INTERVAL 1 DAY) THEN 1 ELSE 0 END) AS tomorrow,
+                SUM(CASE WHEN DATE(t.due_date) > DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+                          AND DATE(t.due_date) <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS this_week
+            FROM tasks t
+            JOIN boards b ON t.board_id = b.id
+            WHERE b.user_id = ?
+              AND b.archived = 0
+              AND t.status != 'completed'
+              AND t.due_date IS NOT NULL
+        ");
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch();
+
+        sendResponse([
+            'today'    => (int)($row['today'] ?? 0),
+            'tomorrow' => (int)($row['tomorrow'] ?? 0),
+            'thisWeek' => (int)($row['this_week'] ?? 0),
+        ]);
+    } catch (PDOException $e) {
+        error_log("Get due summary error: " . $e->getMessage());
+        sendResponse(['error' => 'Failed to fetch due summary'], 500);
     }
 }
 
