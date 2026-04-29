@@ -284,6 +284,11 @@ const api = {
       method: 'DELETE',
     });
   },
+
+  // Report endpoint
+  async getReport(start, end) {
+    return this.request(`/report.php?start=${start}&end=${end}`);
+  },
 };
 
 export default api;

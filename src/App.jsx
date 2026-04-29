@@ -13,6 +13,7 @@ import QuickAddModal from './components/QuickAddModal';
 import CompletionModal from './components/CompletionModal';
 import OfflineIndicator from './components/OfflineIndicator';
 import ReloadPrompt from './components/ReloadPrompt';
+import ReportView from './components/ReportView';
 import useFocusTrap from './hooks/useFocusTrap';
 
 const App = () => {
@@ -291,6 +292,22 @@ const App = () => {
   const [editingJournalTag, setEditingJournalTag] = useState(null);
   const [journalDeleteConfirm, setJournalDeleteConfirm] = useState(null);
   const [expandedJournalId, setExpandedJournalId] = useState(null);
+
+  // Report state
+  const [reportData, setReportData] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+
+  const loadReport = async (start, end) => {
+    setReportLoading(true);
+    try {
+      const data = await api.getReport(start, end);
+      setReportData(data);
+    } catch (err) {
+      setError('Failed to load report: ' + err.message);
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   // Auto-load subtasks for all tasks when tasks change
   useEffect(() => {
@@ -1217,7 +1234,7 @@ const App = () => {
       )}
 
       {/* Main Content */}
-      <div className={`flex-1 min-w-0 ${viewMode === 'journal' ? 'flex flex-col h-screen overflow-hidden' : ''}`}>
+      <div className={`flex-1 min-w-0 ${viewMode === 'journal' ? 'flex flex-col h-screen overflow-hidden' : viewMode === 'report' ? 'overflow-y-auto' : ''}`}>
         {/* Visually-hidden h1 for screen readers (Phase 3) */}
         <h1 className="sr-only">SuperSix Task Manager</h1>
 
@@ -1234,14 +1251,24 @@ const App = () => {
             <img src="/SuperSix-Logo.png" alt="SuperSix" className="h-8" />
             <div className="flex items-center gap-2">
               {user && (
-                <button
-                  onClick={() => { setViewMode(viewMode === 'journal' ? 'board' : 'journal'); }}
-                  className={`p-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
-                  aria-label="Toggle journal"
-                  aria-pressed={viewMode === 'journal'}
-                >
-                  <Icon name="book-open" size={18} />
-                </button>
+                <>
+                  <button
+                    onClick={() => { setViewMode(viewMode === 'journal' ? 'board' : 'journal'); }}
+                    className={`p-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                    aria-label="Toggle journal"
+                    aria-pressed={viewMode === 'journal'}
+                  >
+                    <Icon name="book-open" size={18} />
+                  </button>
+                  <button
+                    onClick={() => { setViewMode(viewMode === 'report' ? 'board' : 'report'); }}
+                    className={`p-2 rounded-lg transition-colors ${viewMode === 'report' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                    aria-label="Toggle report"
+                    aria-pressed={viewMode === 'report'}
+                  >
+                    <Icon name="bar-chart-2" size={18} />
+                  </button>
+                </>
               )}
               <UserHeader
                 user={user}
@@ -1263,15 +1290,26 @@ const App = () => {
             </div>
             <div className="absolute right-6 top-6 flex items-center gap-3">
               {user && (
-                <button
-                  onClick={() => { setViewMode(viewMode === 'journal' ? 'board' : 'journal'); }}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
-                  aria-label="Toggle journal"
-                  aria-pressed={viewMode === 'journal'}
-                >
-                  <Icon name="book-open" size={16} />
-                  <span className="text-sm font-medium">Journal</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => { setViewMode(viewMode === 'journal' ? 'board' : 'journal'); }}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                    aria-label="Toggle journal"
+                    aria-pressed={viewMode === 'journal'}
+                  >
+                    <Icon name="book-open" size={16} />
+                    <span className="text-sm font-medium">Journal</span>
+                  </button>
+                  <button
+                    onClick={() => { setViewMode(viewMode === 'report' ? 'board' : 'report'); }}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${viewMode === 'report' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                    aria-label="Toggle report"
+                    aria-pressed={viewMode === 'report'}
+                  >
+                    <Icon name="bar-chart-2" size={16} />
+                    <span className="text-sm font-medium">Report</span>
+                  </button>
+                </>
               )}
               <UserHeader
                 user={user}
@@ -1718,7 +1756,7 @@ const App = () => {
             </div>
           )}
           </>
-          ) : (
+          ) : viewMode === 'journal' ? (
           /* Global Journal View — Chat-style layout */
           <div className="w-full min-w-0 overflow-hidden flex flex-col flex-1 min-h-0">
             <div className="flex items-center justify-between mb-4 shrink-0">
@@ -1946,6 +1984,12 @@ const App = () => {
               </div>
             </div>
           </div>
+          ) : (
+          <ReportView
+            reportData={reportData}
+            reportLoading={reportLoading}
+            onLoad={loadReport}
+          />
           )}
         </div>
       </div>

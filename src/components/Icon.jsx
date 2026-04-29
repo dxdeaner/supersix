@@ -27,6 +27,7 @@ const iconPaths = {
   'rotate-ccw': 'M1 4v6h6M3.51 15a9 9 0 102.13-9.36L1 10',
   'log-in': 'M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3',
   'check-circle': 'M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3',
+  'bar-chart-2': 'M18 20V10M12 20V4M6 20v-6',
 };
 
 const Icon = ({ name, size = 16, className = '', ...props }) => (
