@@ -869,6 +869,16 @@ const App = () => {
     () => [[setTasks, [...tasks]], [setEditingTask, editingTask]]
   );
 
+  const toggleBlockTask = withOptimistic(
+    (taskId) => api.toggleBlockTask(taskId),
+    (taskId) => {
+      setTasks(prev => prev.map(t =>
+        t.id === taskId ? { ...t, isBlocked: !t.isBlocked } : t
+      ));
+    },
+    () => [[setTasks, [...tasks]]]
+  );
+
   const duplicateTask = withGuard(async (taskId) => {
     const newTask = await api.duplicateTask(taskId);
     setTasks(prev => [...prev, newTask]);
@@ -1678,6 +1688,7 @@ const App = () => {
                         onMoveDown={moveTaskDown}
                         onDemote={demoteTask}
                         onDuplicate={duplicateTask}
+                        onToggleBlock={toggleBlockTask}
                         canMoveUp={slotIndex > 0}
                         canMoveDown={slotIndex < activeTasks.length - 1}
                         isMoving={movingTask === task.id}
@@ -1732,6 +1743,7 @@ const App = () => {
                           onMoveDown={moveTaskDown}
                           onPromote={promoteTask}
                           onDuplicate={duplicateTask}
+                          onToggleBlock={toggleBlockTask}
                           canMoveUp={index > 0}
                           canMoveDown={index < queuedTasks.length - 1}
                           isMoving={movingTask === task.id}

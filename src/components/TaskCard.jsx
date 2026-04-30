@@ -30,7 +30,7 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return { value, label };
 });
 
-const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, onDuplicate, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks, onUpdateDueDate, boards = [], onMoveToBoard }) => {
+const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, onDuplicate, onToggleBlock, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks, onUpdateDueDate, boards = [], onMoveToBoard }) => {
   const [expanded, setExpanded] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [dueDate, setDueDate] = useState('');
@@ -57,7 +57,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
 
   return (
     <div
-      className={`relative bg-slate-800 rounded-lg p-4 px-6 border-2 transition-all duration-200 ease-in-out cursor-pointer hover:cursor-grab active:cursor-grabbing ${isMoving ? 'transform scale-105 shadow-lg shadow-cyan-400/20' : ''} ${isCurrentFocus ? 'border-cyan-400 shadow-lg shadow-cyan-400/20 ring-1 ring-cyan-400/30' : 'border-slate-700 hover:border-slate-600'} ${isDragOver ? 'border-green-400 bg-green-500/40 animate-pulse shadow-lg shadow-green-400/50' : ''} ${isCompleting ? 'overflow-hidden' : ''}`}
+      className={`relative bg-slate-800 rounded-lg p-4 px-6 border-2 transition-all duration-200 ease-in-out cursor-pointer hover:cursor-grab active:cursor-grabbing ${isMoving ? 'transform scale-105 shadow-lg shadow-cyan-400/20' : ''} ${task.isBlocked ? 'border-red-500 shadow-lg shadow-red-500/20 ring-1 ring-red-500/30' : isCurrentFocus ? 'border-cyan-400 shadow-lg shadow-cyan-400/20 ring-1 ring-cyan-400/30' : 'border-slate-700 hover:border-slate-600'} ${isDragOver ? 'border-green-400 bg-green-500/40 animate-pulse shadow-lg shadow-green-400/50' : ''} ${isCompleting ? 'overflow-hidden' : ''}`}
       draggable={!isCompleting}
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
@@ -287,6 +287,15 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
                 )}
               </div>
             )}
+
+            <button
+              onClick={() => onToggleBlock(task.id)}
+              className={`border bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1 ${task.isBlocked ? 'border-red-500 text-red-400 hover:border-red-400 hover:text-red-300' : 'border-slate-500 text-slate-500 hover:border-slate-400 hover:text-slate-400'}`}
+              title={task.isBlocked ? 'Unblock task' : 'Block task'}
+            >
+              <Icon name={task.isBlocked ? 'unlock' : 'lock'} size={12} />
+              <span>{task.isBlocked ? 'Unblock' : 'Block'}</span>
+            </button>
 
             <button
               onClick={() => onDelete(task.id)}

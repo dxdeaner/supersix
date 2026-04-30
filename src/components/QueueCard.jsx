@@ -9,7 +9,7 @@ const getDueDateColor = (dueDate) => {
   return 'bg-green-600';
 };
 
-const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown, onPromote, onDuplicate, canMoveUp, canMoveDown, isMoving, subtasks, onDragStart, onDragEnd, boards = [], onMoveToBoard }) => {
+const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown, onPromote, onDuplicate, onToggleBlock, canMoveUp, canMoveDown, isMoving, subtasks, onDragStart, onDragEnd, boards = [], onMoveToBoard }) => {
   const [expanded, setExpanded] = useState(false);
   const [movingBoard, setMovingBoard] = useState(false);
 
@@ -22,7 +22,7 @@ const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown
 
   return (
     <div
-      className={`bg-slate-800/50 rounded-lg p-3 border border-slate-700 transition-all duration-300 ease-in-out ${isMoving ? 'transform scale-105 shadow-lg shadow-cyan-400/20' : 'hover:border-slate-600'} ${onDragStart ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      className={`bg-slate-800/50 rounded-lg p-3 border transition-all duration-300 ease-in-out ${task.isBlocked ? 'border-red-500 shadow-md shadow-red-500/20' : 'border-slate-700'} ${isMoving ? 'transform scale-105 shadow-lg shadow-cyan-400/20' : task.isBlocked ? '' : 'hover:border-slate-600'} ${onDragStart ? 'cursor-grab active:cursor-grabbing' : ''}`}
       draggable={!!onDragStart}
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}
@@ -133,6 +133,14 @@ const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown
             </div>
           )}
 
+          <button
+            onClick={() => onToggleBlock(task.id)}
+            className={`p-1 transition-colors rounded ${task.isBlocked ? 'text-red-400 hover:text-red-300 hover:bg-red-400/10' : 'text-slate-400 hover:text-slate-300 hover:bg-slate-600/50'}`}
+            title={task.isBlocked ? 'Unblock task' : 'Block task'}
+            aria-label={task.isBlocked ? 'Unblock task' : 'Block task'}
+          >
+            <Icon name={task.isBlocked ? 'unlock' : 'lock'} size={14} />
+          </button>
           <button
             onClick={() => onDelete(task.id)}
             className="text-red-400 hover:text-red-300 p-1 transition-colors hover:bg-red-400/10 rounded"

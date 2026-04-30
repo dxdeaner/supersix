@@ -51,6 +51,9 @@ switch ($method) {
             case 'duplicate':
                 duplicateTask($pdo);
                 break;
+            case 'block':
+                toggleBlockTask($pdo);
+                break;
             case 'move':
                 moveTaskToBoard($pdo);
                 break;
@@ -113,6 +116,7 @@ function getTasks($pdo) {
                 'completedAt' => toIsoUtc($task['completed_at']),
                 'result' => $task['result'] ?? null,
                 'url'    => $task['url'] ?? null,
+                'isBlocked' => (bool)($task['is_blocked'] ?? false),
             ];
         }, $tasks);
         
@@ -234,6 +238,7 @@ function createTask($pdo) {
             'createdAt' => toIsoUtc($task['created_at']),
             'completedAt' => toIsoUtc($task['completed_at']),
             'url' => $task['url'] ?? null,
+            'isBlocked' => (bool)($task['is_blocked'] ?? false),
         ], 201);
     } catch (PDOException $e) {
         error_log("Create task error: " . $e->getMessage());
@@ -840,11 +845,55 @@ function duplicateTask($pdo) {
             'createdAt' => toIsoUtc($task['created_at']),
             'completedAt' => toIsoUtc($task['completed_at']),
             'url' => $task['url'] ?? null,
+            'isBlocked' => (bool)($task['is_blocked'] ?? false),
         ], 201);
     } catch (PDOException $e) {
         $pdo->rollback();
         error_log("Duplicate task error: " . $e->getMessage());
         sendResponse(['error' => 'Failed to duplicate task'], 500);
+    }
+}
+
+function toggleBlockTask($pdo) {
+    if (!isset($_SESSION['user_id'])) {
+        sendResponse(['error' => 'Authentication required'], 401);
+    }
+    $userId = $_SESSION['user_id'];
+
+    $data = getJsonInput();
+    validateRequired($data, ['id']);
+
+    try {
+        // Get task info and verify ownership
+        $stmt = $pdo->prepare("
+            SELECT t.id, t.board_id, t.title, t.is_blocked, b.name as board_name
+            FROM tasks t
+            JOIN boards b ON t.board_id = b.id
+            WHERE t.id = ? AND b.user_id = ?
+        ");
+        $stmt->execute([$data['id'], $userId]);
+        $task = $stmt->fetch();
+
+        if (!$task) {
+            sendResponse(['error' => 'Task not found or access denied'], 404);
+        }
+
+        $newBlocked = $task['is_blocked'] ? 0 : 1;
+
+        $stmt = $pdo->prepare("UPDATE tasks SET is_blocked = ? WHERE id = ?");
+        $stmt->execute([$newBlocked, $data['id']]);
+
+        // Auto-log with blocker tag
+        $autoType = $newBlocked ? 'task_blocked' : 'task_unblocked';
+        $content = ($newBlocked ? 'Blocked' : 'Unblocked') . ' task "' . $task['title'] . '" on ' . $task['board_name'];
+        insertJournalAutoLog($pdo, $userId, $autoType, $content,
+            (int)$task['board_id'], $task['board_name'], (int)$data['id'], $task['title'],
+            $newBlocked ? 'blocker' : null);
+
+        sendResponse(['message' => 'Task ' . ($newBlocked ? 'blocked' : 'unblocked') . ' successfully', 'isBlocked' => (bool)$newBlocked]);
+    } catch (PDOException $e) {
+        error_log("Toggle block task error: " . $e->getMessage());
+        sendResponse(['error' => 'Failed to toggle block status'], 500);
     }
 }
 

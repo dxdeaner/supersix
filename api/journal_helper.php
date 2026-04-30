@@ -15,14 +15,15 @@ function insertJournalAutoLog(
     ?int $boardId = null,
     ?string $boardName = null,
     ?int $taskId = null,
-    ?string $taskTitle = null
+    ?string $taskTitle = null,
+    ?string $tag = null
 ): void {
     try {
         $stmt = $pdo->prepare("
-            INSERT INTO journal_entries (user_id, entry_type, auto_type, content, board_id, board_name, task_id, task_title)
-            VALUES (?, 'auto', ?, ?, ?, ?, ?, ?)
+            INSERT INTO journal_entries (user_id, entry_type, auto_type, content, board_id, board_name, task_id, task_title, tag)
+            VALUES (?, 'auto', ?, ?, ?, ?, ?, ?, ?)
         ");
-        $stmt->execute([$userId, $autoType, $content, $boardId, $boardName, $taskId, $taskTitle]);
+        $stmt->execute([$userId, $autoType, $content, $boardId, $boardName, $taskId, $taskTitle, $tag]);
     } catch (PDOException $e) {
         error_log("Journal auto-log error ($autoType): " . $e->getMessage());
     }
