@@ -2420,6 +2420,16 @@ const App = () => {
                       </button>
                     );
                   })}
+                  {editingTask.dueDate && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingTask({ ...editingTask, dueDate: '' })}
+                      className="px-3 py-1 rounded-full text-xs font-medium transition-colors bg-red-900/50 text-red-400 border border-red-800 hover:bg-red-800/60 flex items-center gap-1"
+                    >
+                      <Icon name="x" size={10} />
+                      Clear
+                    </button>
+                  )}
                 </div>
               </div>
 

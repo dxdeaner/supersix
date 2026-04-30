@@ -141,6 +141,16 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
                   </button>
                 );
               })}
+              {dueDate && (
+                <button
+                  type="button"
+                  onClick={() => setDueDate(null)}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors bg-red-900/50 text-red-400 border border-red-800 hover:bg-red-800/60 flex items-center gap-1"
+                >
+                  <Icon name="x" size={10} />
+                  Clear
+                </button>
+              )}
             </div>
             {dueDate && (
               <p className="text-xs text-cyan-400 mt-1.5">
