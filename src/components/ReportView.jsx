@@ -206,7 +206,7 @@ const ReportView = ({ reportData, reportLoading, onLoad }) => {
     if (!reportData) return [];
     const items = [
       ...reportData.tasks.map(t => ({ ...t, _type: 'task', _ts: t.completedAt })),
-      ...reportData.journal.map(j => ({ ...j, _type: 'journal', _ts: j.createdAt })),
+      ...reportData.journal.filter(j => j.autoType !== 'task_promoted').map(j => ({ ...j, _type: 'journal', _ts: j.createdAt })),
     ].sort((a, b) => a._ts.localeCompare(b._ts));
 
     const groups = {};
