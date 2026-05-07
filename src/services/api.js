@@ -300,6 +300,10 @@ const api = {
   async getDueSummary() {
     return this.request('/tasks.php?action=due_summary');
   },
+
+  async getLookingAhead() {
+    return this.request('/tasks.php?action=looking_ahead');
+  },
 };
 
 export default api;

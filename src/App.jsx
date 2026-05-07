@@ -2080,6 +2080,7 @@ const App = () => {
             reportData={reportData}
             reportLoading={reportLoading}
             onLoad={loadReport}
+            user={user}
           />
           )}
         </div>

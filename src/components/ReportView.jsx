@@ -4,6 +4,7 @@ import {
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import Icon from './Icon';
+import ReportSummaryModal from './ReportSummaryModal';
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
 
@@ -160,12 +161,13 @@ const TAG_STYLES = {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-const ReportView = ({ reportData, reportLoading, onLoad }) => {
+const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
   const [preset, setPreset] = useState('this-week');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [showCustom, setShowCustom] = useState(false);
   const [range, setRange] = useState(() => getPresetRange('this-week'));
+  const [showSummary, setShowSummary] = useState(false);
 
   // Load on mount and whenever range changes
   useEffect(() => {
@@ -244,6 +246,15 @@ const ReportView = ({ reportData, reportLoading, onLoad }) => {
           <span className="text-slate-400 text-sm ml-1">
             {formatShortDate(range.start)} – {formatShortDate(range.end)}
           </span>
+        )}
+        {reportData && (
+          <button
+            onClick={() => setShowSummary(true)}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-sm rounded-lg transition-colors"
+          >
+            <Icon name="file-text" size={14} />
+            Summary
+          </button>
         )}
       </div>
 
@@ -505,6 +516,14 @@ const ReportView = ({ reportData, reportLoading, onLoad }) => {
         </>
       )}
     </div>
+
+    <ReportSummaryModal
+      isOpen={showSummary}
+      onClose={() => setShowSummary(false)}
+      reportData={reportData}
+      range={range}
+      userName={user?.name || user?.email || ''}
+    />
   );
 };
 

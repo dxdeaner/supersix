@@ -20,6 +20,8 @@ switch ($method) {
         $action = $_GET['action'] ?? '';
         if ($action === 'due_summary') {
             getDueSummary($pdo);
+        } elseif ($action === 'looking_ahead') {
+            getLookingAhead($pdo);
         } else {
             getTasks($pdo);
         }
@@ -159,6 +161,63 @@ function getDueSummary($pdo) {
     } catch (PDOException $e) {
         error_log("Get due summary error: " . $e->getMessage());
         sendResponse(['error' => 'Failed to fetch due summary'], 500);
+    }
+}
+
+function getLookingAhead($pdo) {
+    if (!isset($_SESSION['user_id'])) {
+        sendResponse(['error' => 'Authentication required'], 401);
+    }
+    $userId = $_SESSION['user_id'];
+
+    try {
+        $futureDueStmt = $pdo->prepare("
+            SELECT t.id, t.title, t.due_date, b.name AS board_name
+            FROM tasks t
+            JOIN boards b ON t.board_id = b.id
+            WHERE b.user_id = ?
+              AND b.archived = 0
+              AND t.status != 'completed'
+              AND t.due_date > NOW()
+            ORDER BY t.due_date ASC
+            LIMIT 15
+        ");
+        $futureDueStmt->execute([$userId]);
+        $futureDue = $futureDueStmt->fetchAll();
+
+        $blockedStmt = $pdo->prepare("
+            SELECT t.id, t.title, b.name AS board_name
+            FROM tasks t
+            JOIN boards b ON t.board_id = b.id
+            WHERE b.user_id = ?
+              AND b.archived = 0
+              AND t.status != 'completed'
+              AND t.is_blocked = 1
+            ORDER BY t.id ASC
+        ");
+        $blockedStmt->execute([$userId]);
+        $blocked = $blockedStmt->fetchAll();
+
+        sendResponse([
+            'futureDue' => array_map(function($t) {
+                return [
+                    'id'        => (int)$t['id'],
+                    'title'     => $t['title'],
+                    'dueDate'   => toIsoUtc($t['due_date']),
+                    'boardName' => $t['board_name'],
+                ];
+            }, $futureDue),
+            'blocked' => array_map(function($t) {
+                return [
+                    'id'        => (int)$t['id'],
+                    'title'     => $t['title'],
+                    'boardName' => $t['board_name'],
+                ];
+            }, $blocked),
+        ]);
+    } catch (PDOException $e) {
+        error_log("Looking ahead error: " . $e->getMessage());
+        sendResponse(['error' => 'Failed to fetch looking ahead data'], 500);
     }
 }
 
@@ -583,30 +642,39 @@ function postponeTask($pdo) {
     validateRequired($data, ['id']);
     
     try {
-        // Verify task ownership and get current due date
+        // Verify task ownership and get current due date + metadata for journal
         $stmt = $pdo->prepare("
-            SELECT t.due_date 
-            FROM tasks t 
-            JOIN boards b ON t.board_id = b.id 
+            SELECT t.due_date, t.title, b.id AS board_id, b.name AS board_name
+            FROM tasks t
+            JOIN boards b ON t.board_id = b.id
             WHERE t.id = ? AND b.user_id = ?
         ");
         $stmt->execute([$data['id'], $userId]);
         $task = $stmt->fetch();
-        
+
         if (!$task) {
             sendResponse(['error' => 'Task not found or access denied'], 404);
         }
-        
+
         // Calculate new due date
         if ($task['due_date']) {
             $newDate = date('Y-m-d H:i:s', strtotime($task['due_date'] . ' +1 day'));
         } else {
             $newDate = date('Y-m-d 09:00:00', strtotime('+1 day'));
         }
-        
+
         $stmt = $pdo->prepare("UPDATE tasks SET due_date = ? WHERE id = ?");
         $stmt->execute([$newDate, $data['id']]);
-        
+
+        $friendlyDate = date('D, M j', strtotime($newDate));
+        insertJournalAutoLog(
+            $pdo, $userId, 'task_postponed',
+            'Postponed "' . $task['title'] . '" to ' . $friendlyDate,
+            (int)$task['board_id'], $task['board_name'],
+            (int)$data['id'], $task['title'],
+            'waiting'
+        );
+
         sendResponse(['message' => 'Task postponed successfully']);
     } catch (PDOException $e) {
         error_log("Postpone task error: " . $e->getMessage());
