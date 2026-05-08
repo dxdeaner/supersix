@@ -299,7 +299,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
 
             <button
               onClick={() => onEdit(task.id)}
-              className="text-slate-400 hover:text-cyan-400 p-1 transition-colors hover:bg-cyan-400/10 rounded"
+              className="text-slate-300 hover:text-cyan-400 p-1 transition-colors hover:bg-cyan-400/10 rounded"
               title="Edit task"
               aria-label="Edit task"
             >
