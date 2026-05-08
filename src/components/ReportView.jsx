@@ -236,6 +236,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
   ];
 
   return (
+    <>
     <div className="w-full px-4 py-6 max-w-5xl mx-auto">
 
       {/* Header */}
@@ -524,6 +525,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
       range={range}
       userName={user?.name || user?.email || ''}
     />
+    </>
   );
 };
 
