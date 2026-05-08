@@ -303,7 +303,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
               title="Edit task"
               aria-label="Edit task"
             >
-              <Icon name="pencil" size={16} />
+              <Icon name="edit-3" size={16} />
             </button>
             <button
               onClick={() => onDelete(task.id)}
