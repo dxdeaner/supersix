@@ -298,6 +298,14 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
             </button>
 
             <button
+              onClick={() => onEdit(task.id)}
+              className="text-slate-400 hover:text-cyan-400 p-1 transition-colors hover:bg-cyan-400/10 rounded"
+              title="Edit task"
+              aria-label="Edit task"
+            >
+              <Icon name="pencil" size={16} />
+            </button>
+            <button
               onClick={() => onDelete(task.id)}
               className="text-red-400 hover:text-red-300 p-1 transition-colors hover:bg-red-400/10 rounded"
               title="Delete task"
