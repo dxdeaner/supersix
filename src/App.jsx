@@ -1984,11 +1984,11 @@ const App = () => {
                               )}
                               <button
                                 onClick={(e) => { e.stopPropagation(); cycleJournalPriority(entry.id, entry.priority ?? 2); }}
-                                className="shrink-0 mt-0.5 leading-none text-slate-600 hover:text-slate-400 transition-colors text-xs tabular-nums"
+                                className={`shrink-0 mt-0.5 leading-none transition-colors text-sm tabular-nums ${(entry.priority ?? 2) === 1 ? 'text-slate-600 hover:text-slate-400' : (entry.priority ?? 2) === 2 ? 'text-cyan-500 hover:text-cyan-400' : 'text-green-500 hover:text-green-400'}`}
                                 title={`Priority ${entry.priority ?? 2} — click to cycle`}
                                 aria-label={`Priority ${entry.priority ?? 2}`}
                               >
-                                {(entry.priority ?? 2) === 1 ? '·' : (entry.priority ?? 2) === 2 ? '··' : <span className="text-cyan-500">···</span>}
+                                {(entry.priority ?? 2) === 1 ? '·' : (entry.priority ?? 2) === 2 ? '··' : '···'}
                               </button>
                               {entry.tag && (
                                 <span className={`shrink-0 px-1.5 py-0 text-xs rounded-full ${tagStyles[entry.tag]?.pill || ''}`}>
