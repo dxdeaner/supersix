@@ -88,12 +88,15 @@ function useMetrics(reportData) {
     const onTime = tasksWithDue.filter(t => t.completedAt <= t.dueDate).length;
     const onTimeRate = tasksWithDue.length > 0 ? Math.round((onTime / tasksWithDue.length) * 100) : null;
 
-    const taggedJournal = journal.filter(j => j.tag);
+    const visibleJournal = journal.filter(j => (j.priority ?? 2) >= 2);
+    const taggedJournal = visibleJournal.filter(j => j.tag);
     const wins = taggedJournal.filter(j => j.tag === 'win').length;
     const blockers = taggedJournal.filter(j => j.tag === 'blocker').length;
     const ideas = taggedJournal.filter(j => j.tag === 'idea').length;
     const reflections = taggedJournal.filter(j => j.tag === 'reflection').length;
     const healthScore = (wins + blockers) > 0 ? Math.round((wins / (wins + blockers)) * 100) : null;
+    const hiddenCount = journal.length - visibleJournal.length;
+    const highlightEntries = journal.filter(j => (j.priority ?? 2) === 3);
 
     // Daily output data (filled with 0s)
     const dailyCounts = {};
@@ -121,7 +124,7 @@ function useMetrics(reportData) {
       { name: 'Reflections', value: reflections, color: '#60a5fa' },
     ].filter(d => d.value > 0);
 
-    return { onTimeRate, tasksWithDueCount: tasksWithDue.length, wins, blockers, ideas, reflections, healthScore, dailyCounts, timeData, tagData };
+    return { onTimeRate, tasksWithDueCount: tasksWithDue.length, wins, blockers, ideas, reflections, healthScore, dailyCounts, timeData, tagData, visibleJournal, hiddenCount, highlightEntries };
   }, [reportData]);
 }
 
@@ -208,7 +211,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
     if (!reportData) return [];
     const items = [
       ...reportData.tasks.map(t => ({ ...t, _type: 'task', _ts: t.completedAt })),
-      ...reportData.journal.filter(j => j.autoType !== 'task_promoted').map(j => ({ ...j, _type: 'journal', _ts: j.createdAt })),
+      ...reportData.journal.filter(j => j.autoType !== 'task_promoted' && (j.priority ?? 2) >= 2).map(j => ({ ...j, _type: 'journal', _ts: j.createdAt })),
     ].sort((a, b) => a._ts.localeCompare(b._ts));
 
     const groups = {};
@@ -340,8 +343,8 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
             />
             <StatCard
               label="Journal Entries"
-              value={reportData.journal.length}
-              sub={`${reportData.journal.filter(j => j.entryType === 'manual').length} written · ${reportData.journal.filter(j => j.entryType === 'auto').length} auto`}
+              value={metrics.visibleJournal.length}
+              sub={metrics.hiddenCount > 0 ? `${metrics.hiddenCount} activity log hidden` : `${reportData.journal.filter(j => j.entryType === 'manual').length} written · ${reportData.journal.filter(j => j.entryType === 'auto').length} auto`}
             />
           </div>
 
@@ -450,6 +453,33 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
               )}
             </div>
           </div>
+
+          {/* Highlights */}
+          {metrics.highlightEntries.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide mb-3">Highlights</h3>
+              <div className="space-y-2">
+                {metrics.highlightEntries.map(entry => (
+                  <div key={entry.id} className="bg-slate-800/80 border border-cyan-500/30 rounded-lg px-4 py-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-cyan-500 text-xs shrink-0 mt-0.5">···</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                          {entry.tag && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full border ${TAG_STYLES[entry.tag] || ''}`}>
+                              {entry.tag}
+                            </span>
+                          )}
+                          <span className="text-slate-500 text-xs ml-auto">{formatTime(entry.createdAt)}</span>
+                        </div>
+                        <p className="text-slate-200 text-sm">{entry.content}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Daily Log */}
           {dailyLog.length === 0 ? (

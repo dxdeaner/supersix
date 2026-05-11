@@ -54,7 +54,7 @@ try {
     $tasks = $taskStmt->fetchAll();
 
     $journalStmt = $pdo->prepare("
-        SELECT id, entry_type, tag, auto_type, content, board_name, task_title, created_at
+        SELECT id, entry_type, tag, auto_type, content, board_name, task_title, created_at, priority
         FROM journal_entries
         WHERE user_id = ?
           AND created_at >= ?
@@ -85,6 +85,7 @@ try {
             'boardName' => $j['board_name'],
             'taskTitle' => $j['task_title'],
             'createdAt' => toIsoUtc($j['created_at']),
+            'priority'  => (int)($j['priority'] ?? 2),
         ];
     }, $journal);
 

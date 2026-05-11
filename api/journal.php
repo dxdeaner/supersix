@@ -6,7 +6,7 @@ require_once 'config.php';
 startSecureSession();
 
 // Validate CSRF token on state-changing requests
-if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'DELETE'])) {
+if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'PATCH', 'DELETE'])) {
     validateCsrf();
 }
 
@@ -23,6 +23,9 @@ switch ($method) {
         break;
     case 'PUT':
         updateEntry($pdo);
+        break;
+    case 'PATCH':
+        setPriority($pdo);
         break;
     case 'DELETE':
         deleteEntry($pdo);
@@ -43,7 +46,7 @@ function getEntries($pdo) {
         $offset = ($page - 1) * $perPage;
 
         $stmt = $pdo->prepare("
-            SELECT id, entry_type, tag, auto_type, content, board_id, board_name, task_id, task_title, created_at, updated_at
+            SELECT id, entry_type, tag, auto_type, content, board_id, board_name, task_id, task_title, created_at, updated_at, priority
             FROM journal_entries
             WHERE user_id = ? AND (auto_type IS NULL OR auto_type != 'task_promoted')
             ORDER BY created_at DESC
@@ -70,6 +73,7 @@ function getEntries($pdo) {
                 'taskTitle' => $entry['task_title'],
                 'createdAt' => toIsoUtc($entry['created_at']),
                 'updatedAt' => toIsoUtc($entry['updated_at']),
+                'priority' => (int)($entry['priority'] ?? 2),
             ];
         }, $entries);
 
@@ -106,7 +110,7 @@ function createEntry($pdo) {
         $entryId = $pdo->lastInsertId();
 
         $stmt = $pdo->prepare("
-            SELECT id, entry_type, tag, auto_type, content, board_id, board_name, task_id, task_title, created_at, updated_at
+            SELECT id, entry_type, tag, auto_type, content, board_id, board_name, task_id, task_title, created_at, updated_at, priority
             FROM journal_entries WHERE id = ?
         ");
         $stmt->execute([$entryId]);
@@ -124,6 +128,7 @@ function createEntry($pdo) {
             'taskTitle' => $entry['task_title'],
             'createdAt' => toIsoUtc($entry['created_at']),
             'updatedAt' => toIsoUtc($entry['updated_at']),
+            'priority' => (int)($entry['priority'] ?? 2),
         ], 201);
     } catch (PDOException $e) {
         error_log("Create journal entry error: " . $e->getMessage());
@@ -164,6 +169,37 @@ function updateEntry($pdo) {
     } catch (PDOException $e) {
         error_log("Update journal entry error: " . $e->getMessage());
         sendResponse(['error' => 'Failed to update journal entry'], 500);
+    }
+}
+
+function setPriority($pdo) {
+    if (!isset($_SESSION['user_id'])) {
+        sendResponse(['error' => 'Authentication required'], 401);
+    }
+    $userId = $_SESSION['user_id'];
+    $data = getJsonInput();
+    validateRequired($data, ['id', 'priority']);
+
+    $priority = (int)$data['priority'];
+    if (!in_array($priority, [1, 2, 3], true)) {
+        sendResponse(['error' => 'Priority must be 1, 2, or 3'], 400);
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE journal_entries SET priority = ?
+            WHERE id = ? AND user_id = ?
+        ");
+        $stmt->execute([$priority, $data['id'], $userId]);
+
+        if ($stmt->rowCount() === 0) {
+            sendResponse(['error' => 'Entry not found or access denied'], 404);
+        }
+
+        sendResponse(['message' => 'Priority updated', 'priority' => $priority]);
+    } catch (PDOException $e) {
+        error_log("Set journal priority error: " . $e->getMessage());
+        sendResponse(['error' => 'Failed to update priority'], 500);
     }
 }
 

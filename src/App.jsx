@@ -978,6 +978,17 @@ const App = () => {
     }
   };
 
+  const cycleJournalPriority = async (id, currentPriority) => {
+    const next = currentPriority >= 3 ? 1 : currentPriority + 1;
+    setJournalEntries(prev => prev.map(e => e.id === id ? { ...e, priority: next } : e));
+    try {
+      await api.setJournalPriority(id, next);
+    } catch (err) {
+      setJournalEntries(prev => prev.map(e => e.id === id ? { ...e, priority: currentPriority } : e));
+      setError('Failed to update priority: ' + err.message);
+    }
+  };
+
   // Load/refresh journal entries when switching to journal view
   useEffect(() => {
     if (viewMode === 'journal') {
@@ -1971,6 +1982,14 @@ const App = () => {
                                   <Icon name="clock" size={12} />
                                 </span>
                               )}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); cycleJournalPriority(entry.id, entry.priority ?? 2); }}
+                                className="shrink-0 mt-0.5 leading-none text-slate-600 hover:text-slate-400 transition-colors text-xs tabular-nums"
+                                title={`Priority ${entry.priority ?? 2} — click to cycle`}
+                                aria-label={`Priority ${entry.priority ?? 2}`}
+                              >
+                                {(entry.priority ?? 2) === 1 ? '·' : (entry.priority ?? 2) === 2 ? '··' : <span className="text-cyan-500">···</span>}
+                              </button>
                               {entry.tag && (
                                 <span className={`shrink-0 px-1.5 py-0 text-xs rounded-full ${tagStyles[entry.tag]?.pill || ''}`}>
                                   {entry.tag}

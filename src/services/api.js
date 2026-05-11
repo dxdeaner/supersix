@@ -292,6 +292,13 @@ const api = {
     });
   },
 
+  async setJournalPriority(id, priority) {
+    return this.request('/journal.php', {
+      method: 'PATCH',
+      body: JSON.stringify({ id, priority }),
+    });
+  },
+
   // Report endpoint
   async getReport(start, end) {
     return this.request(`/report.php?start=${start}&end=${end}`);
