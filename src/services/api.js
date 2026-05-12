@@ -166,10 +166,14 @@ const api = {
     });
   },
 
-  async updateTask(id, title, description, dueDate, url = undefined) {
+  async updateTask(id, title, description, dueDate, url = undefined, recurringFields = undefined) {
     return this.request('/tasks.php', {
       method: 'PUT',
-      body: JSON.stringify({ id, title, description, dueDate, ...(url !== undefined && { url }) }),
+      body: JSON.stringify({
+        id, title, description, dueDate,
+        ...(url !== undefined && { url }),
+        ...(recurringFields !== undefined && recurringFields),
+      }),
     });
   },
 

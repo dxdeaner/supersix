@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Icon from './Icon';
 
 const CONFETTI_COLORS = ['#22d3ee', '#f97316', '#22c55e', '#eab308', '#a855f7', '#ec4899'];
@@ -36,6 +36,18 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('09:00');
   const [movingBoard, setMovingBoard] = useState(false);
+  const movingBoardRef = useRef(null);
+
+  useEffect(() => {
+    if (!movingBoard) return;
+    const handler = (e) => {
+      if (movingBoardRef.current && !movingBoardRef.current.contains(e.target)) {
+        setMovingBoard(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [movingBoard]);
 
   const handleDragStart = (e) => {
     e.dataTransfer.setData('text/plain', '');
@@ -263,7 +275,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
             </button>
 
             {boards.length > 0 && onMoveToBoard && (
-              <div className="relative">
+              <div className="relative" ref={movingBoardRef}>
                 <button
                   onClick={() => setMovingBoard(v => !v)}
                   className="border border-slate-500 text-slate-500 hover:border-slate-400 hover:text-slate-400 bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"

@@ -93,17 +93,20 @@ function getTasks($pdo) {
             sendResponse(['error' => 'Board not found or access denied'], 404);
         }
         
+        generateRecurringTasks($pdo, $boardId);
+
         $stmt = $pdo->prepare("
-            SELECT * FROM tasks 
-            WHERE board_id = ? 
-            ORDER BY 
-                FIELD(status, 'active', 'queued', 'completed'), 
-                position ASC, 
+            SELECT * FROM tasks
+            WHERE board_id = ?
+            ORDER BY
+                is_recurring ASC,
+                FIELD(status, 'active', 'queued', 'completed'),
+                position ASC,
                 completed_at DESC
         ");
         $stmt->execute([$boardId]);
         $tasks = $stmt->fetchAll();
-        
+
         // Format the response
         $formattedTasks = array_map(function($task) {
             return [
@@ -119,9 +122,12 @@ function getTasks($pdo) {
                 'result' => $task['result'] ?? null,
                 'url'    => $task['url'] ?? null,
                 'isBlocked' => (bool)($task['is_blocked'] ?? false),
+                'isRecurring' => (bool)($task['is_recurring'] ?? false),
+                'recurrenceDow' => $task['recurrence_dow'] ?? null,
+                'recurrenceDom' => $task['recurrence_dom'] ?? null,
             ];
         }, $tasks);
-        
+
         sendResponse($formattedTasks);
     } catch (PDOException $e) {
         error_log("Get tasks error: " . $e->getMessage());
@@ -254,12 +260,15 @@ function createTask($pdo) {
         $result = $stmt->fetch();
         $nextPosition = $result['next_position'];
         
-        $stmt = $pdo->prepare("
-            INSERT INTO tasks (board_id, title, description, status, position, due_date, url)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ");
-
         $dueDate = isset($data['dueDate']) && !empty($data['dueDate']) ? $data['dueDate'] : null;
+        $isRecurring = !empty($data['is_recurring']) ? 1 : 0;
+        $recurrenceDow = $isRecurring && !empty($data['recurrence_dow']) ? $data['recurrence_dow'] : null;
+        $recurrenceDom = $isRecurring && !empty($data['recurrence_dom']) ? $data['recurrence_dom'] : null;
+
+        $stmt = $pdo->prepare("
+            INSERT INTO tasks (board_id, title, description, status, position, due_date, url, is_recurring, recurrence_dow, recurrence_dom)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
 
         $stmt->execute([
             $data['board_id'],
@@ -269,6 +278,9 @@ function createTask($pdo) {
             $nextPosition,
             $dueDate,
             $data['url'] ?? null,
+            $isRecurring,
+            $recurrenceDow,
+            $recurrenceDom,
         ]);
         
         $taskId = $pdo->lastInsertId();
@@ -298,6 +310,9 @@ function createTask($pdo) {
             'completedAt' => toIsoUtc($task['completed_at']),
             'url' => $task['url'] ?? null,
             'isBlocked' => (bool)($task['is_blocked'] ?? false),
+            'isRecurring' => (bool)($task['is_recurring'] ?? false),
+            'recurrenceDow' => $task['recurrence_dow'] ?? null,
+            'recurrenceDom' => $task['recurrence_dom'] ?? null,
         ], 201);
     } catch (PDOException $e) {
         error_log("Create task error: " . $e->getMessage());
@@ -335,21 +350,37 @@ function updateTask($pdo) {
         
         $dueDate = isset($data['dueDate']) && !empty($data['dueDate']) ? $data['dueDate'] : null;
 
-        // Only update url if the key was explicitly sent (prevents edits from wiping it)
-        $urlSql = array_key_exists('url', $data) ? ', url = ?' : '';
-        $stmt = $pdo->prepare("
-            UPDATE tasks
-            SET title = ?, description = ?, due_date = ?{$urlSql}
-            WHERE id = ?
-        ");
+        // Build dynamic SET clause
+        $setClauses = ['title = ?', 'description = ?', 'due_date = ?'];
         $params = [trim($data['title']), $data['description'] ?? '', $dueDate];
+
         if (array_key_exists('url', $data)) {
+            $setClauses[] = 'url = ?';
             $params[] = $data['url'] ?: null;
         }
-        $params[] = $data['id'];
 
-        $result = $stmt->execute($params);
-        
+        if (array_key_exists('isRecurring', $data)) {
+            $isRecurring = !empty($data['isRecurring']) ? 1 : 0;
+            $setClauses[] = 'is_recurring = ?';
+            $params[] = $isRecurring;
+
+            $setClauses[] = 'recurrence_dow = ?';
+            $params[] = ($isRecurring && !empty($data['recurrenceDow'])) ? $data['recurrenceDow'] : null;
+
+            $setClauses[] = 'recurrence_dom = ?';
+            $params[] = ($isRecurring && !empty($data['recurrenceDom'])) ? $data['recurrenceDom'] : null;
+
+            // When making recurring, force status to queued so it leaves active slot
+            if ($isRecurring) {
+                $setClauses[] = 'status = ?';
+                $params[] = 'queued';
+            }
+        }
+
+        $params[] = $data['id'];
+        $stmt = $pdo->prepare("UPDATE tasks SET " . implode(', ', $setClauses) . " WHERE id = ?");
+        $stmt->execute($params);
+
         sendResponse(['message' => 'Task updated successfully']);
     } catch (PDOException $e) {
         error_log("Update task error: " . $e->getMessage());
@@ -1060,12 +1091,73 @@ function promoteQueuedTask($pdo, $boardId) {
         
         if ($firstQueued) {
             $stmt = $pdo->prepare("
-                UPDATE tasks 
-                SET status = 'active', position = ? 
+                UPDATE tasks
+                SET status = 'active', position = ?
                 WHERE id = ?
             ");
             $stmt->execute([$activeCount + 1, $firstQueued['id']]);
         }
+    }
+}
+
+function generateRecurringTasks($pdo, $boardId) {
+    $today = date('Y-m-d');
+    $todayDow = (int)date('w'); // 0=Sun, 1=Mon...6=Sat
+    $todayDom = (int)date('j'); // 1-31
+
+    $stmt = $pdo->prepare("
+        SELECT * FROM tasks
+        WHERE board_id = ? AND is_recurring = 1
+        AND (recurrence_last_date IS NULL OR recurrence_last_date != ?)
+    ");
+    $stmt->execute([$boardId, $today]);
+    $templates = $stmt->fetchAll();
+
+    foreach ($templates as $template) {
+        $matches = false;
+
+        if ($template['recurrence_dow']) {
+            $days = array_map('intval', explode(',', $template['recurrence_dow']));
+            if (in_array($todayDow, $days)) $matches = true;
+        }
+
+        if (!$matches && $template['recurrence_dom']) {
+            $days = array_map('intval', explode(',', $template['recurrence_dom']));
+            if (in_array($todayDom, $days)) $matches = true;
+        }
+
+        if (!$matches) continue;
+
+        // Determine status for the new instance
+        $countStmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM tasks WHERE board_id = ? AND status = 'active' AND is_recurring = 0");
+        $countStmt->execute([$boardId]);
+        $activeCount = $countStmt->fetch()['cnt'];
+
+        if ($activeCount < MAX_ACTIVE_TASKS) {
+            $newStatus = 'active';
+            $posStmt = $pdo->prepare("SELECT COALESCE(MAX(position), 0) + 1 as pos FROM tasks WHERE board_id = ? AND status = 'active' AND is_recurring = 0");
+        } else {
+            $newStatus = 'queued';
+            $posStmt = $pdo->prepare("SELECT COALESCE(MAX(position), 0) + 1 as pos FROM tasks WHERE board_id = ? AND status = 'queued' AND is_recurring = 0");
+        }
+        $posStmt->execute([$boardId]);
+        $newPos = $posStmt->fetch()['pos'];
+
+        $insertStmt = $pdo->prepare("
+            INSERT INTO tasks (board_id, title, description, status, position, url, is_recurring)
+            VALUES (?, ?, ?, ?, ?, ?, 0)
+        ");
+        $insertStmt->execute([
+            $boardId,
+            $template['title'],
+            $template['description'],
+            $newStatus,
+            $newPos,
+            $template['url'],
+        ]);
+
+        $updateStmt = $pdo->prepare("UPDATE tasks SET recurrence_last_date = ? WHERE id = ?");
+        $updateStmt->execute([$today, $template['id']]);
     }
 }
 ?>

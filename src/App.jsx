@@ -818,6 +818,9 @@ const App = () => {
       description: task.description || '',
       dueDate: task.dueDate ? task.dueDate.slice(0, 16).replace(' ', 'T') : '',
       url: task.url || '',
+      isRecurring: task.isRecurring || false,
+      recurrenceDow: task.recurrenceDow ? task.recurrenceDow.split(',').map(Number) : [],
+      recurrenceDom: task.recurrenceDom ? task.recurrenceDom.split(',').map(Number) : [],
     });
 
     // Load subtasks for this task
@@ -850,18 +853,42 @@ const App = () => {
 
   const saveEdit = withOptimistic(
     async () => {
+      const recurringFields = {
+        isRecurring: editingTask.isRecurring,
+        recurrenceDow: editingTask.isRecurring && editingTask.recurrenceDow.length
+          ? editingTask.recurrenceDow.join(',')
+          : null,
+        recurrenceDom: editingTask.isRecurring && editingTask.recurrenceDom.length
+          ? editingTask.recurrenceDom.join(',')
+          : null,
+      };
       await api.updateTask(
         editingTask.id,
         editingTask.title,
         editingTask.description,
         editingTask.dueDate || null,
         editingTask.url || null,
+        recurringFields,
       );
     },
     () => {
       setTasks(prev => prev.map(t =>
         t.id === editingTask.id
-          ? { ...t, title: editingTask.title, description: editingTask.description, dueDate: editingTask.dueDate || null, url: editingTask.url || null }
+          ? {
+              ...t,
+              title: editingTask.title,
+              description: editingTask.description,
+              dueDate: editingTask.dueDate || null,
+              url: editingTask.url || null,
+              isRecurring: editingTask.isRecurring,
+              recurrenceDow: editingTask.isRecurring && editingTask.recurrenceDow.length
+                ? editingTask.recurrenceDow.join(',')
+                : null,
+              recurrenceDom: editingTask.isRecurring && editingTask.recurrenceDom.length
+                ? editingTask.recurrenceDom.join(',')
+                : null,
+              status: editingTask.isRecurring ? 'queued' : t.status,
+            }
           : t
       ));
       setEditingTask(null);
@@ -1099,17 +1126,21 @@ const App = () => {
 
   // Filter tasks by status
   const activeTasks = tasks
-    .filter(task => task.status === 'active')
+    .filter(task => task.status === 'active' && !task.isRecurring)
     .sort((a, b) => a.position - b.position)
     .slice(0, MAX_ACTIVE_TASKS);
 
   const queuedTasks = tasks
-    .filter(task => task.status === 'queued')
+    .filter(task => task.status === 'queued' && !task.isRecurring)
     .sort((a, b) => a.position - b.position);
 
   const completedTasks = tasks
     .filter(task => task.status === 'completed')
     .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+
+  const recurringTemplates = tasks
+    .filter(task => task.isRecurring)
+    .sort((a, b) => a.title.localeCompare(b.title));
 
   const viewingTask = viewingTaskId ? tasks.find(t => t.id === viewingTaskId) : null;
 
@@ -1795,6 +1826,61 @@ const App = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Recurring Tasks Section */}
+              {recurringTemplates.length > 0 && (
+                <div>
+                  <div className="border-t border-slate-700 pt-8">
+                    <h2 className="text-xl font-semibold text-white mb-4 flex items-center">
+                      <span className="w-2 h-2 bg-purple-400 rounded-full mr-3" aria-hidden="true"></span>
+                      Recurring ({recurringTemplates.length})
+                    </h2>
+                    <div className="space-y-2">
+                      {recurringTemplates.map(task => {
+                        const dowNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                        const dowLabel = task.recurrenceDow
+                          ? task.recurrenceDow.split(',').map(d => dowNames[parseInt(d)]).join(', ')
+                          : null;
+                        const domLabel = task.recurrenceDom
+                          ? task.recurrenceDom.split(',').map(d => {
+                              const n = parseInt(d);
+                              const s = n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th';
+                              return `${n}${s}`;
+                            }).join(', ')
+                          : null;
+                        const patternLabel = [dowLabel, domLabel].filter(Boolean).join(' · ');
+
+                        return (
+                          <div key={task.id} className="bg-slate-800/50 rounded-lg px-4 py-3 border border-purple-500/20 flex items-center justify-between">
+                            <div>
+                              <span className="text-white font-medium">{task.title}</span>
+                              {patternLabel && (
+                                <span className="ml-3 text-purple-400 text-xs">{patternLabel}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => editTask(task.id)}
+                                className="text-slate-400 hover:text-slate-300 p-1 transition-colors hover:bg-slate-600/50 rounded"
+                                title="Edit recurring task"
+                              >
+                                <Icon name="edit" size={14} />
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm(task.id)}
+                                className="text-slate-400 hover:text-red-400 p-1 transition-colors hover:bg-red-400/10 rounded"
+                                title="Delete recurring task"
+                              >
+                                <Icon name="trash-2" size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             /* Completed Tasks */
@@ -2474,6 +2560,64 @@ const App = () => {
                   className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
                   placeholder="https://..."
                 />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-slate-300 text-sm font-medium">Repeat</label>
+                  <button
+                    type="button"
+                    onClick={() => setEditingTask({ ...editingTask, isRecurring: !editingTask.isRecurring, recurrenceDow: [], recurrenceDom: [] })}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${editingTask.isRecurring ? 'bg-purple-600' : 'bg-slate-600'}`}
+                    role="switch"
+                    aria-checked={editingTask.isRecurring}
+                  >
+                    <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${editingTask.isRecurring ? 'translate-x-4' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+                {editingTask.isRecurring && (
+                  <div className="space-y-3 pl-0">
+                    <div>
+                      <p className="text-slate-400 text-xs mb-2">Days of week</p>
+                      <div className="flex gap-1.5">
+                        {['Su','Mo','Tu','We','Th','Fr','Sa'].map((label, i) => {
+                          const active = editingTask.recurrenceDow.includes(i);
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => {
+                                const next = active
+                                  ? editingTask.recurrenceDow.filter(d => d !== i)
+                                  : [...editingTask.recurrenceDow, i].sort((a,b) => a-b);
+                                setEditingTask({ ...editingTask, recurrenceDow: next });
+                              }}
+                              className={`w-8 h-8 rounded-full text-xs font-medium transition-colors ${active ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-xs mb-2">Days of month <span className="text-slate-500">(e.g. 1, 15)</span></p>
+                      <input
+                        type="text"
+                        value={editingTask.recurrenceDom.join(', ')}
+                        onChange={(e) => {
+                          const parsed = e.target.value
+                            .split(',')
+                            .map(s => parseInt(s.trim(), 10))
+                            .filter(n => !isNaN(n) && n >= 1 && n <= 31);
+                          setEditingTask({ ...editingTask, recurrenceDom: [...new Set(parsed)].sort((a,b)=>a-b) });
+                        }}
+                        placeholder="e.g. 1, 15"
+                        className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-400"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Icon from './Icon';
 
 const getDueDateColor = (dueDate) => {
@@ -12,6 +12,18 @@ const getDueDateColor = (dueDate) => {
 const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown, onPromote, onDuplicate, onToggleBlock, canMoveUp, canMoveDown, isMoving, subtasks, onDragStart, onDragEnd, boards = [], onMoveToBoard }) => {
   const [expanded, setExpanded] = useState(false);
   const [movingBoard, setMovingBoard] = useState(false);
+  const movingBoardRef = useRef(null);
+
+  useEffect(() => {
+    if (!movingBoard) return;
+    const handler = (e) => {
+      if (movingBoardRef.current && !movingBoardRef.current.contains(e.target)) {
+        setMovingBoard(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [movingBoard]);
 
   const handleDragStart = (e) => {
     e.dataTransfer.setData('text/plain', '');
@@ -108,7 +120,7 @@ const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown
             <Icon name="copy" size={14} />
           </button>
           {boards.length > 0 && onMoveToBoard && (
-            <div className="relative">
+            <div className="relative" ref={movingBoardRef}>
               <button
                 onClick={() => setMovingBoard(v => !v)}
                 className="text-slate-400 hover:text-slate-300 p-1 transition-colors hover:bg-slate-600/50 rounded"
