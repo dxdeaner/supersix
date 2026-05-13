@@ -23,7 +23,7 @@ const ReloadPrompt = () => {
   if (!showReload) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 flex justify-center">
+    <div className="fixed top-4 left-4 right-4 z-50 flex justify-center">
       <div className="bg-slate-800 border border-cyan-500/30 rounded-lg shadow-xl shadow-cyan-500/10 px-4 py-3 flex items-center space-x-3 max-w-md">
         <div className="flex-1">
           <p className="text-white text-sm font-medium">Update available</p>

@@ -294,6 +294,8 @@ const App = () => {
   const [editingJournalTag, setEditingJournalTag] = useState(null);
   const [journalDeleteConfirm, setJournalDeleteConfirm] = useState(null);
   const [expandedJournalId, setExpandedJournalId] = useState(null);
+  const [journalSearch, setJournalSearch] = useState('');
+  const [journalFilterTag, setJournalFilterTag] = useState(null);
 
   // Report state
   const [reportData, setReportData] = useState(null);
@@ -1946,6 +1948,44 @@ const App = () => {
               </button>
             </div>
 
+            {/* Filter bar */}
+            <div className="flex flex-wrap items-center gap-2 mb-3 shrink-0">
+              <input
+                type="text"
+                value={journalSearch}
+                onChange={(e) => setJournalSearch(e.target.value)}
+                placeholder="Search entries…"
+                className="flex-1 min-w-[160px] bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+              />
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { value: 'blocker',     label: 'Blocker' },
+                  { value: 'decision',    label: 'Decision' },
+                  { value: 'delegated',   label: 'Delegated' },
+                  { value: 'idea',        label: 'Idea' },
+                  { value: 'learning',    label: 'Learning' },
+                  { value: 'meeting',     label: 'Meeting' },
+                  { value: 'note',        label: 'Note' },
+                  { value: 'opportunity', label: 'Opportunity' },
+                  { value: 'reflection',  label: 'Reflection' },
+                  { value: 'waiting',     label: 'Waiting' },
+                  { value: 'win',         label: 'Win' },
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setJournalFilterTag(journalFilterTag === value ? null : value)}
+                    className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                      journalFilterTag === value
+                        ? tagStyles[value]?.active || ''
+                        : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Entries feed — chronological, oldest first */}
             <div className="flex-1 min-h-0 overflow-y-auto journal-scroll">
             {journalLoading && journalEntries.length === 0 ? (
@@ -1965,7 +2005,11 @@ const App = () => {
                 )}
                 {(() => {
                   let lastDateLabel = '';
-                  const chronological = [...journalEntries].reverse();
+                  const chronological = [...journalEntries].reverse().filter((entry) => {
+                    if (journalFilterTag && entry.tag !== journalFilterTag) return false;
+                    if (journalSearch.trim() && !entry.content.toLowerCase().includes(journalSearch.trim().toLowerCase())) return false;
+                    return true;
+                  });
                   return chronological.map((entry) => {
                     const entryDate = new Date(entry.createdAt);
                     const today = new Date();
