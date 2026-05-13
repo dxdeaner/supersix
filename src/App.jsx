@@ -296,6 +296,8 @@ const App = () => {
   const [expandedJournalId, setExpandedJournalId] = useState(null);
   const [journalSearch, setJournalSearch] = useState('');
   const [journalFilterTag, setJournalFilterTag] = useState(null);
+  const [journalDateFrom, setJournalDateFrom] = useState('');
+  const [journalDateTo, setJournalDateTo] = useState('');
 
   // Report state
   const [reportData, setReportData] = useState(null);
@@ -1957,6 +1959,21 @@ const App = () => {
                 placeholder="Search entries…"
                 className="flex-1 min-w-[160px] bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
               />
+              <input
+                type="date"
+                value={journalDateFrom}
+                onChange={(e) => setJournalDateFrom(e.target.value)}
+                title="From date"
+                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-cyan-500 [color-scheme:dark]"
+              />
+              <span className="text-slate-600 text-xs">–</span>
+              <input
+                type="date"
+                value={journalDateTo}
+                onChange={(e) => setJournalDateTo(e.target.value)}
+                title="To date"
+                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-cyan-500 [color-scheme:dark]"
+              />
               <div className="flex flex-wrap gap-1.5">
                 {[
                   { value: 'blocker',     label: 'Blocker' },
@@ -2008,6 +2025,14 @@ const App = () => {
                   const chronological = [...journalEntries].reverse().filter((entry) => {
                     if (journalFilterTag && entry.tag !== journalFilterTag) return false;
                     if (journalSearch.trim() && !entry.content.toLowerCase().includes(journalSearch.trim().toLowerCase())) return false;
+                    if (journalDateFrom) {
+                      const entryDay = new Date(entry.createdAt).toISOString().slice(0, 10);
+                      if (entryDay < journalDateFrom) return false;
+                    }
+                    if (journalDateTo) {
+                      const entryDay = new Date(entry.createdAt).toISOString().slice(0, 10);
+                      if (entryDay > journalDateTo) return false;
+                    }
                     return true;
                   });
                   return chronological.map((entry) => {
