@@ -1368,7 +1368,7 @@ const App = () => {
                 />
               </div>
             </div>
-            {user && (dueSummary.overdue > 0 || dueSummary.today > 0 || dueSummary.tomorrow > 0 || dueSummary.thisWeek > 0) && (
+            {user && (dueSummary.overdue > 0 || dueSummary.today > 0 || dueSummary.tomorrow > 0 || dueSummary.thisWeek > 0 || queuedTasks.length > 0) && (
               <div className="flex items-center justify-center gap-4 px-4 py-1.5 bg-slate-800 border-b border-slate-700 text-xs shrink-0">
                 {dueSummary.overdue > 0 && (
                   <span className="text-red-400 font-medium">Overdue <span className="font-bold">{dueSummary.overdue}</span></span>
@@ -1381,6 +1381,9 @@ const App = () => {
                 )}
                 {dueSummary.thisWeek > 0 && (
                   <span className="text-slate-400 font-medium">This week <span className="font-bold">{dueSummary.thisWeek}</span></span>
+                )}
+                {queuedTasks.length > 0 && (
+                  <span className="text-cyan-400 font-medium">Queue <span className="font-bold">{queuedTasks.length}</span></span>
                 )}
               </div>
             )}
