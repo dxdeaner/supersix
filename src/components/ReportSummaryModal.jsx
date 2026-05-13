@@ -62,15 +62,22 @@ function buildSummary(reportData, lookingAhead, range, userName, showAutoLogs) {
     ? Math.round((wins.length / (wins.length + blockers.length)) * 100)
     : null;
 
+  const TAG_ORDER = ['win','blocker','idea','learning','reflection','decision','meeting','note','opportunity','delegated','waiting'];
+  const tagCounts = {};
+  TAG_ORDER.forEach(t => {
+    const n = entries.filter(j => j.tag === t).length;
+    if (n > 0) tagCounts[t] = n;
+  });
+
   const dateLabel = fmtRange(range.start, range.end);
 
-  return { byBoard, wins, blockers, keyNotes, totalTasks, boardCount, onTimeRate, healthScore, dateLabel, userName };
+  return { byBoard, wins, blockers, keyNotes, tagCounts, totalTasks, boardCount, onTimeRate, healthScore, dateLabel, userName };
 }
 
 // ─── HTML generator (for clipboard rich text) ────────────────────────────────
 
 function buildHtml(summary, lookingAhead) {
-  const { byBoard, wins, blockers, keyNotes, totalTasks, boardCount, onTimeRate, healthScore, dateLabel, userName } = summary;
+  const { byBoard, wins, blockers, keyNotes, tagCounts, totalTasks, boardCount, onTimeRate, healthScore, dateLabel, userName } = summary;
 
   const tag = (label, color) =>
     `<span style="display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;background:${color}20;color:${color};border:1px solid ${color}40;margin-right:4px;">${label}</span>`;
@@ -96,6 +103,16 @@ function buildHtml(summary, lookingAhead) {
       healthScore != null ? ` and a <strong>${healthScore}%</strong> health score (${summary.wins.length} win${summary.wins.length !== 1 ? 's' : ''}, ${summary.blockers.length} blocker${summary.blockers.length !== 1 ? 's' : ''})` : ''
     }.
   </p>`;
+
+  // Journal activity breakdown
+  if (Object.keys(tagCounts).length > 0) {
+    html += `<h2 style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin:0 0 8px;">Journal Activity</h2>`;
+    html += `<p style="margin:0 0 20px;">`;
+    Object.entries(tagCounts).forEach(([t, n]) => {
+      html += tag(`${t}: ${n}`, TAG_COLORS[t] || '#94a3b8');
+    });
+    html += `</p>`;
+  }
 
   // Completed tasks by board
   if (totalTasks > 0) {
@@ -168,7 +185,7 @@ function buildHtml(summary, lookingAhead) {
 // ─── Plain text generator ─────────────────────────────────────────────────────
 
 function buildPlainText(summary, lookingAhead) {
-  const { byBoard, wins, blockers, keyNotes, totalTasks, boardCount, onTimeRate, healthScore, dateLabel, userName } = summary;
+  const { byBoard, wins, blockers, keyNotes, tagCounts, totalTasks, boardCount, onTimeRate, healthScore, dateLabel, userName } = summary;
   const lines = [];
 
   lines.push('STATUS REPORT');
@@ -182,6 +199,12 @@ function buildPlainText(summary, lookingAhead) {
   if (healthScore != null) summaryLine += `, ${healthScore}% health score`;
   lines.push(summaryLine + '.');
   lines.push('');
+
+  if (Object.keys(tagCounts).length > 0) {
+    lines.push('JOURNAL ACTIVITY');
+    lines.push('  ' + Object.entries(tagCounts).map(([t, n]) => `${t}: ${n}`).join('  •  '));
+    lines.push('');
+  }
 
   if (totalTasks > 0) {
     lines.push('COMPLETED TASKS');
@@ -302,7 +325,7 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
 
   if (!isOpen) return null;
 
-  const { byBoard, wins, blockers, keyNotes, totalTasks, boardCount, onTimeRate, healthScore, dateLabel } = summary || {};
+  const { byBoard, wins, blockers, keyNotes, tagCounts, totalTasks, boardCount, onTimeRate, healthScore, dateLabel } = summary || {};
 
   const hasFuture = lookingAhead?.futureDue?.length > 0;
   const hasBlocked = lookingAhead?.blocked?.length > 0;
@@ -387,6 +410,20 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
                 )}.
               </p>
             </div>
+
+            {/* Journal activity by tag */}
+            {tagCounts && Object.keys(tagCounts).length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">Journal Activity</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(tagCounts).map(([t, n]) => (
+                    <span key={t} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${TAG_STYLES[t] || ''}`}>
+                      {t} <span className="font-semibold">{n}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Completed tasks by board */}
             {totalTasks > 0 && (
