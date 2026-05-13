@@ -272,8 +272,11 @@ const api = {
   },
 
   // Journal endpoints
-  async getJournalEntries(page = 1) {
-    return this.request(`/journal.php?page=${page}`);
+  async getJournalEntries(page = 1, dateFrom = '', dateTo = '') {
+    const params = new URLSearchParams({ page });
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo)   params.set('dateTo', dateTo);
+    return this.request(`/journal.php?${params}`);
   },
 
   async createJournalEntry(content, tag = null) {

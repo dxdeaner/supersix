@@ -45,14 +45,32 @@ function getEntries($pdo) {
         $perPage = 30;
         $offset = ($page - 1) * $perPage;
 
+        $dateFrom = $_GET['dateFrom'] ?? null;
+        $dateTo   = $_GET['dateTo']   ?? null;
+
+        $where  = "user_id = ? AND (auto_type IS NULL OR auto_type != 'task_promoted')";
+        $params = [$userId];
+
+        if ($dateFrom) {
+            $where   .= " AND DATE(created_at) >= ?";
+            $params[] = $dateFrom;
+        }
+        if ($dateTo) {
+            $where   .= " AND DATE(created_at) <= ?";
+            $params[] = $dateTo;
+        }
+
+        $params[] = $perPage + 1;
+        $params[] = $offset;
+
         $stmt = $pdo->prepare("
             SELECT id, entry_type, tag, auto_type, content, board_id, board_name, task_id, task_title, created_at, updated_at, priority
             FROM journal_entries
-            WHERE user_id = ? AND (auto_type IS NULL OR auto_type != 'task_promoted')
+            WHERE $where
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
         ");
-        $stmt->execute([$userId, $perPage + 1, $offset]);
+        $stmt->execute($params);
         $entries = $stmt->fetchAll();
 
         $hasMore = count($entries) > $perPage;

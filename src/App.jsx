@@ -951,10 +951,10 @@ const App = () => {
   };
 
   // Journal functions
-  const loadJournalEntries = async (page = 1) => {
+  const loadJournalEntries = async (page = 1, dateFrom = journalDateFrom, dateTo = journalDateTo) => {
     setJournalLoading(true);
     try {
-      const data = await api.getJournalEntries(page);
+      const data = await api.getJournalEntries(page, dateFrom, dateTo);
       if (page === 1) {
         setJournalEntries(data.entries);
       } else {
@@ -1027,6 +1027,13 @@ const App = () => {
       loadJournalEntries(1);
     }
   }, [viewMode]);
+
+  // Reload from page 1 when date filters change
+  useEffect(() => {
+    if (viewMode === 'journal') {
+      loadJournalEntries(1, journalDateFrom, journalDateTo);
+    }
+  }, [journalDateFrom, journalDateTo]);
 
   const journalScrollToBottom = useRef(false);
   // Scroll to bottom when flagged (initial load or new entry)
@@ -2025,14 +2032,6 @@ const App = () => {
                   const chronological = [...journalEntries].reverse().filter((entry) => {
                     if (journalFilterTag && entry.tag !== journalFilterTag) return false;
                     if (journalSearch.trim() && !entry.content.toLowerCase().includes(journalSearch.trim().toLowerCase())) return false;
-                    if (journalDateFrom) {
-                      const entryDay = new Date(entry.createdAt).toISOString().slice(0, 10);
-                      if (entryDay < journalDateFrom) return false;
-                    }
-                    if (journalDateTo) {
-                      const entryDay = new Date(entry.createdAt).toISOString().slice(0, 10);
-                      if (entryDay > journalDateTo) return false;
-                    }
                     return true;
                   });
                   return chronological.map((entry) => {
