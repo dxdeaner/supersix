@@ -20,6 +20,8 @@ switch ($method) {
         $action = $_GET['action'] ?? '';
         if ($action === 'due_summary') {
             getDueSummary($pdo);
+        } elseif ($action === 'due_tasks') {
+            getDueTasks($pdo);
         } elseif ($action === 'looking_ahead') {
             getLookingAhead($pdo);
         } else {
@@ -167,6 +169,55 @@ function getDueSummary($pdo) {
     } catch (PDOException $e) {
         error_log("Get due summary error: " . $e->getMessage());
         sendResponse(['error' => 'Failed to fetch due summary'], 500);
+    }
+}
+
+function getDueTasks($pdo) {
+    if (!isset($_SESSION['user_id'])) {
+        sendResponse(['error' => 'Authentication required'], 401);
+    }
+    $userId = $_SESSION['user_id'];
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT t.id, t.title, t.due_date, t.board_id, b.name AS board_name,
+                   CASE
+                     WHEN DATE(t.due_date) < CURDATE()                                                        THEN 'overdue'
+                     WHEN DATE(t.due_date) = CURDATE()                                                        THEN 'today'
+                     WHEN DATE(t.due_date) = DATE_ADD(CURDATE(), INTERVAL 1 DAY)                             THEN 'tomorrow'
+                     WHEN DATE(t.due_date) <= DATE_ADD(CURDATE(), INTERVAL (7 - DAYOFWEEK(CURDATE())) DAY)   THEN 'thisWeek'
+                   END AS bucket
+            FROM tasks t
+            JOIN boards b ON t.board_id = b.id
+            WHERE b.user_id = ?
+              AND b.archived = 0
+              AND t.status != 'completed'
+              AND t.due_date IS NOT NULL
+              AND DATE(t.due_date) <= DATE_ADD(CURDATE(), INTERVAL (7 - DAYOFWEEK(CURDATE())) DAY)
+            ORDER BY t.due_date ASC
+            LIMIT 100
+        ");
+        $stmt->execute([$userId]);
+        $rows = $stmt->fetchAll();
+
+        $grouped = ['overdue' => [], 'today' => [], 'tomorrow' => [], 'thisWeek' => []];
+        foreach ($rows as $r) {
+            $bucket = $r['bucket'];
+            if ($bucket && isset($grouped[$bucket])) {
+                $grouped[$bucket][] = [
+                    'id'        => (int)$r['id'],
+                    'title'     => $r['title'],
+                    'boardId'   => (int)$r['board_id'],
+                    'boardName' => $r['board_name'],
+                    'dueDate'   => toIsoUtc($r['due_date']),
+                ];
+            }
+        }
+
+        sendResponse($grouped);
+    } catch (PDOException $e) {
+        error_log("Get due tasks error: " . $e->getMessage());
+        sendResponse(['error' => 'Failed to fetch due tasks'], 500);
     }
 }
 

@@ -305,6 +305,9 @@ const App = () => {
 
   // Due summary state
   const [dueSummary, setDueSummary] = useState({ overdue: 0, today: 0, tomorrow: 0, thisWeek: 0 });
+  const [dueTasks, setDueTasks] = useState({ overdue: [], today: [], tomorrow: [], thisWeek: [] });
+  const [openDueBucket, setOpenDueBucket] = useState(null);
+  const [highlightedTaskId, setHighlightedTaskId] = useState(null);
 
   const loadReport = async (start, end) => {
     setReportLoading(true);
@@ -320,9 +323,17 @@ const App = () => {
 
   const loadDueSummary = async () => {
     try {
-      const data = await api.getDueSummary();
-      setDueSummary(data);
+      const [summary, tasks] = await Promise.all([api.getDueSummary(), api.getDueTasks()]);
+      setDueSummary(summary);
+      setDueTasks(tasks);
     } catch { /* silent fail */ }
+  };
+
+  const highlightTask = (taskId, boardId) => {
+    switchBoard(boardId);
+    setHighlightedTaskId(taskId);
+    setOpenDueBucket(null);
+    setTimeout(() => setHighlightedTaskId(null), 2500);
   };
 
   // Auto-load subtasks for all tasks when tasks change
@@ -1020,6 +1031,16 @@ const App = () => {
     }
   };
 
+  // Close due-bucket dropdown on outside click
+  useEffect(() => {
+    if (!openDueBucket) return;
+    const handler = (e) => {
+      if (!e.target.closest('[data-due-dropdown]')) setOpenDueBucket(null);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openDueBucket]);
+
   // Load/refresh journal entries when switching to journal view
   useEffect(() => {
     if (viewMode === 'journal') {
@@ -1370,21 +1391,38 @@ const App = () => {
             </div>
             {user && (dueSummary.overdue > 0 || dueSummary.today > 0 || dueSummary.tomorrow > 0 || dueSummary.thisWeek > 0 || queuedTasks.length > 0) && (
               <div className="flex items-center justify-center gap-4 px-4 py-1.5 bg-slate-800 border-b border-slate-700 text-xs shrink-0">
-                {dueSummary.overdue > 0 && (
-                  <span className="text-red-400 font-medium">Overdue <span className="font-bold">{dueSummary.overdue}</span></span>
-                )}
-                {dueSummary.today > 0 && (
-                  <span className="text-orange-400 font-medium">Today <span className="font-bold">{dueSummary.today}</span></span>
-                )}
-                {dueSummary.tomorrow > 0 && (
-                  <span className="text-green-400 font-medium">Tomorrow <span className="font-bold">{dueSummary.tomorrow}</span></span>
-                )}
-                {dueSummary.thisWeek > 0 && (
-                  <span className="text-slate-400 font-medium">This week <span className="font-bold">{dueSummary.thisWeek}</span></span>
-                )}
-                {queuedTasks.length > 0 && (
-                  <span className="text-cyan-400 font-medium">Queue <span className="font-bold">{queuedTasks.length}</span></span>
-                )}
+                {[
+                  { key: 'overdue',  label: 'Overdue',   count: dueSummary.overdue,   color: 'text-red-400',    tasks: dueTasks.overdue },
+                  { key: 'today',    label: 'Today',     count: dueSummary.today,     color: 'text-orange-400', tasks: dueTasks.today },
+                  { key: 'tomorrow', label: 'Tomorrow',  count: dueSummary.tomorrow,  color: 'text-green-400',  tasks: dueTasks.tomorrow },
+                  { key: 'thisWeek', label: 'This week', count: dueSummary.thisWeek,  color: 'text-slate-400',  tasks: dueTasks.thisWeek },
+                  { key: 'queue',    label: 'Queue',     count: queuedTasks.length,   color: 'text-cyan-400',   tasks: queuedTasks.map(t => ({ ...t, boardId: t.boardId ?? currentBoard, boardName: boards.find(b => b.id === (t.boardId ?? currentBoard))?.name ?? '' })) },
+                ].filter(b => b.count > 0).map(b => (
+                  <div key={b.key} className="relative" data-due-dropdown>
+                    <button
+                      onClick={() => setOpenDueBucket(openDueBucket === b.key ? null : b.key)}
+                      className={`${b.color} font-medium hover:opacity-80 transition-opacity`}
+                    >
+                      {b.label} <span className="font-bold">{b.count}</span>
+                    </button>
+                    {openDueBucket === b.key && b.tasks.length > 0 && (
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                        <div className="max-h-64 overflow-y-auto divide-y divide-slate-700/50">
+                          {b.tasks.map(t => (
+                            <button
+                              key={t.id}
+                              onClick={() => highlightTask(t.id, t.boardId)}
+                              className="w-full text-left px-3 py-2 hover:bg-slate-700 transition-colors"
+                            >
+                              <p className="text-white text-xs font-medium truncate">{t.title}</p>
+                              <p className="text-slate-500 text-xs">{t.boardName}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </>
@@ -1431,20 +1469,40 @@ const App = () => {
                   requestNotifPermission={requestNotifPermission}
                 />
               </div>
-              {user && (dueSummary.overdue > 0 || dueSummary.today > 0 || dueSummary.tomorrow > 0 || dueSummary.thisWeek > 0) && (
+              {user && (dueSummary.overdue > 0 || dueSummary.today > 0 || dueSummary.tomorrow > 0 || dueSummary.thisWeek > 0 || queuedTasks.length > 0) && (
                 <div className="flex items-center gap-3 text-xs">
-                  {dueSummary.overdue > 0 && (
-                    <span className="text-red-400 font-medium">Overdue <span className="font-bold">{dueSummary.overdue}</span></span>
-                  )}
-                  {dueSummary.today > 0 && (
-                    <span className="text-orange-400 font-medium">Today <span className="font-bold">{dueSummary.today}</span></span>
-                  )}
-                  {dueSummary.tomorrow > 0 && (
-                    <span className="text-green-400 font-medium">Tomorrow <span className="font-bold">{dueSummary.tomorrow}</span></span>
-                  )}
-                  {dueSummary.thisWeek > 0 && (
-                    <span className="text-slate-400 font-medium">This week <span className="font-bold">{dueSummary.thisWeek}</span></span>
-                  )}
+                  {[
+                    { key: 'overdue',  label: 'Overdue',   count: dueSummary.overdue,   color: 'text-red-400',    tasks: dueTasks.overdue },
+                    { key: 'today',    label: 'Today',     count: dueSummary.today,     color: 'text-orange-400', tasks: dueTasks.today },
+                    { key: 'tomorrow', label: 'Tomorrow',  count: dueSummary.tomorrow,  color: 'text-green-400',  tasks: dueTasks.tomorrow },
+                    { key: 'thisWeek', label: 'This week', count: dueSummary.thisWeek,  color: 'text-slate-400',  tasks: dueTasks.thisWeek },
+                    { key: 'queue',    label: 'Queue',     count: queuedTasks.length,   color: 'text-cyan-400',   tasks: queuedTasks.map(t => ({ ...t, boardId: t.boardId ?? currentBoard, boardName: boards.find(b => b.id === (t.boardId ?? currentBoard))?.name ?? '' })) },
+                  ].filter(b => b.count > 0).map(b => (
+                    <div key={b.key} className="relative" data-due-dropdown>
+                      <button
+                        onClick={() => setOpenDueBucket(openDueBucket === b.key ? null : b.key)}
+                        className={`${b.color} font-medium hover:opacity-80 transition-opacity`}
+                      >
+                        {b.label} <span className="font-bold">{b.count}</span>
+                      </button>
+                      {openDueBucket === b.key && b.tasks.length > 0 && (
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-72 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                          <div className="max-h-64 overflow-y-auto divide-y divide-slate-700/50">
+                            {b.tasks.map(t => (
+                              <button
+                                key={t.id}
+                                onClick={() => highlightTask(t.id, t.boardId)}
+                                className="w-full text-left px-3 py-2 hover:bg-slate-700 transition-colors"
+                              >
+                                <p className="text-white text-xs font-medium truncate">{t.title}</p>
+                                <p className="text-slate-500 text-xs">{t.boardName}</p>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -1734,6 +1792,7 @@ const App = () => {
                         task={task}
                         index={slotIndex}
                         isCurrentFocus={isCurrentFocus}
+                        isHighlighted={highlightedTaskId === task.id}
                         isCompleting={completingTask === task.id}
                         onComplete={completeTask}
                         onPostpone={postponeTask}

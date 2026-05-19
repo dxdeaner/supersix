@@ -30,7 +30,7 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return { value, label };
 });
 
-const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, onDuplicate, onToggleBlock, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks, onUpdateDueDate, boards = [], onMoveToBoard }) => {
+const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, onDuplicate, onToggleBlock, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks, onUpdateDueDate, boards = [], onMoveToBoard }) => {
   const [expanded, setExpanded] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [dueDate, setDueDate] = useState('');
@@ -69,7 +69,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isCompleting, onComplete, onPos
 
   return (
     <div
-      className={`relative bg-slate-800 rounded-lg p-4 px-6 border-2 transition-all duration-200 ease-in-out cursor-pointer hover:cursor-grab active:cursor-grabbing ${isMoving ? 'transform scale-105 shadow-lg shadow-cyan-400/20' : ''} ${task.isBlocked ? 'border-red-500 shadow-lg shadow-red-500/20 ring-1 ring-red-500/30' : isCurrentFocus ? 'border-cyan-400 shadow-lg shadow-cyan-400/20 ring-1 ring-cyan-400/30' : 'border-slate-700 hover:border-slate-600'} ${isDragOver ? 'border-green-400 bg-green-500/40 animate-pulse shadow-lg shadow-green-400/50' : ''} ${isCompleting ? 'overflow-hidden' : ''}`}
+      className={`relative bg-slate-800 rounded-lg p-4 px-6 border-2 transition-all duration-200 ease-in-out cursor-pointer hover:cursor-grab active:cursor-grabbing ${isMoving ? 'transform scale-105 shadow-lg shadow-cyan-400/20' : ''} ${task.isBlocked ? 'border-red-500 shadow-lg shadow-red-500/20 ring-1 ring-red-500/30' : isCurrentFocus ? 'border-cyan-400 shadow-lg shadow-cyan-400/20 ring-1 ring-cyan-400/30' : 'border-slate-700 hover:border-slate-600'} ${isDragOver ? 'border-green-400 bg-green-500/40 animate-pulse shadow-lg shadow-green-400/50' : ''} ${isCompleting ? 'overflow-hidden' : ''} ${isHighlighted ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-slate-900' : ''}`}
       draggable={!isCompleting}
       onDragStart={handleDragStart}
       onDragEnd={onDragEnd}

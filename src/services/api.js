@@ -315,6 +315,10 @@ const api = {
     return this.request('/tasks.php?action=due_summary');
   },
 
+  async getDueTasks() {
+    return this.request('/tasks.php?action=due_tasks');
+  },
+
   async getLookingAhead() {
     return this.request('/tasks.php?action=looking_ahead');
   },
