@@ -125,6 +125,7 @@ function getTasks($pdo) {
                 'url'    => $task['url'] ?? null,
                 'isBlocked' => (bool)($task['is_blocked'] ?? false),
                 'isRecurring' => (bool)($task['is_recurring'] ?? false),
+                'fromRecurring' => (bool)($task['from_recurring'] ?? false),
                 'recurrenceDow' => $task['recurrence_dow'] ?? null,
                 'recurrenceDom' => $task['recurrence_dom'] ?? null,
             ];
@@ -156,6 +157,7 @@ function getDueSummary($pdo) {
               AND b.archived = 0
               AND t.status != 'completed'
               AND t.due_date IS NOT NULL
+              AND t.is_recurring = 0
         ");
         $stmt->execute([$userId]);
         $row = $stmt->fetch();
@@ -193,6 +195,7 @@ function getDueTasks($pdo) {
               AND b.archived = 0
               AND t.status != 'completed'
               AND t.due_date IS NOT NULL
+              AND t.is_recurring = 0
               AND DATE(t.due_date) <= DATE_ADD(CURDATE(), INTERVAL (7 - DAYOFWEEK(CURDATE())) DAY)
             ORDER BY t.due_date ASC
             LIMIT 100
@@ -1195,8 +1198,8 @@ function generateRecurringTasks($pdo, $boardId) {
         $newPos = $posStmt->fetch()['pos'];
 
         $insertStmt = $pdo->prepare("
-            INSERT INTO tasks (board_id, title, description, status, position, url, is_recurring)
-            VALUES (?, ?, ?, ?, ?, ?, 0)
+            INSERT INTO tasks (board_id, title, description, status, position, url, is_recurring, from_recurring)
+            VALUES (?, ?, ?, ?, ?, ?, 0, 1)
         ");
         $insertStmt->execute([
             $boardId,

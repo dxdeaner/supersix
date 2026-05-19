@@ -140,6 +140,11 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center flex-1 mr-4">
               <h3 className="font-medium text-white">{task.title}</h3>
+              {task.fromRecurring && (
+                <span className="ml-2 shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 text-xs rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30" title="Auto-generated from a recurring task">
+                  🔄 Recurring
+                </span>
+              )}
               {task.description && (
                 <button
                   onClick={() => setExpanded(!expanded)}
