@@ -946,7 +946,7 @@ const App = () => {
   // Helper functions
   const getBoardStats = (boardId) => {
     if (boardId === currentBoard) {
-      const activeTasks = tasks.filter(t => t.status === 'active').length;
+      const activeTasks = tasks.filter(t => t.status === 'active' && !t.isRecurring).length;
       return `${activeTasks}/${MAX_ACTIVE_TASKS}`;
     }
     const board = boards.find(b => b.id === boardId);
