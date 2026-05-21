@@ -432,7 +432,7 @@ const App = () => {
   // Sync current board's active_count in boards state when tasks change
   useEffect(() => {
     if (!currentBoard) return;
-    const activeCount = tasks.filter(t => t.status === 'active').length;
+    const activeCount = tasks.filter(t => t.status === 'active' && !t.isRecurring).length;
     setBoards(prev => prev.map(b =>
       b.id === currentBoard ? { ...b, active_count: activeCount } : b
     ));
