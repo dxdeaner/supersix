@@ -432,7 +432,7 @@ const App = () => {
   // Sync current board's active_count in boards state when tasks change
   useEffect(() => {
     if (!currentBoard) return;
-    const activeCount = tasks.filter(t => t.status === 'active' && !t.isRecurring).length;
+    const activeCount = tasks.filter(t => t.status === 'active' && !t.isRecurring && !t.fromRecurring).length;
     setBoards(prev => prev.map(b =>
       b.id === currentBoard ? { ...b, active_count: activeCount } : b
     ));
@@ -652,7 +652,7 @@ const App = () => {
     // Create follow-up task if provided
     if (followUpTitle && task) {
       try {
-        const activeCount = tasks.filter(t => t.status === 'active' && t.id !== taskId).length;
+        const activeCount = tasks.filter(t => t.status === 'active' && t.id !== taskId && !t.isRecurring && !t.fromRecurring).length;
         const newTask = await api.createTask(task.boardId, followUpTitle, '', null, followUpUrl || null);
         if (activeCount < MAX_ACTIVE_TASKS && newTask?.id) {
           await api.promoteTask(newTask.id);
@@ -780,7 +780,7 @@ const App = () => {
     async () => {
       const trimmed = newTask.trim();
       if (!trimmed) return;
-      const activeCount = tasks.filter(t => t.status === 'active').length;
+      const activeCount = tasks.filter(t => t.status === 'active' && !t.isRecurring && !t.fromRecurring).length;
       const result = await api.createTask(currentBoard, trimmed);
       // Auto-promote if there's room in active focus
       if (activeCount < MAX_ACTIVE_TASKS && result && result.id) {
@@ -790,7 +790,7 @@ const App = () => {
     () => {
       const trimmed = newTask.trim();
       if (!trimmed) return;
-      const activeCount = tasks.filter(t => t.status === 'active').length;
+      const activeCount = tasks.filter(t => t.status === 'active' && !t.isRecurring && !t.fromRecurring).length;
       const hasRoom = activeCount < MAX_ACTIVE_TASKS;
 
       if (hasRoom) {
@@ -946,7 +946,7 @@ const App = () => {
   // Helper functions
   const getBoardStats = (boardId) => {
     if (boardId === currentBoard) {
-      const activeTasks = tasks.filter(t => t.status === 'active' && !t.isRecurring).length;
+      const activeTasks = tasks.filter(t => t.status === 'active' && !t.isRecurring && !t.fromRecurring).length;
       return `${activeTasks}/${MAX_ACTIVE_TASKS}`;
     }
     const board = boards.find(b => b.id === boardId);
@@ -1158,9 +1158,13 @@ const App = () => {
 
   // Filter tasks by status
   const activeTasks = tasks
-    .filter(task => task.status === 'active' && !task.isRecurring)
+    .filter(task => task.status === 'active' && !task.isRecurring && !task.fromRecurring)
     .sort((a, b) => a.position - b.position)
     .slice(0, MAX_ACTIVE_TASKS);
+
+  const recurringActiveTasks = tasks
+    .filter(task => task.status === 'active' && task.fromRecurring)
+    .sort((a, b) => a.position - b.position);
 
   const queuedTasks = tasks
     .filter(task => task.status === 'queued' && !task.isRecurring)
@@ -1836,6 +1840,50 @@ const App = () => {
                 </div>
               </div>
 
+              {/* Recurring Active Tasks — outside the 6-slot limit */}
+              {recurringActiveTasks.length > 0 && (
+                <div className="border-t border-slate-700 pt-6">
+                  <h2 className="text-base font-semibold text-purple-300 mb-3 flex items-center">
+                    <span className="w-2 h-2 bg-purple-400 rounded-full mr-3" aria-hidden="true"></span>
+                    Recurring Active ({recurringActiveTasks.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {recurringActiveTasks.map((task) => (
+                      <TaskCard
+                        key={`${task.id}-recurring`}
+                        task={task}
+                        index={null}
+                        isCurrentFocus={false}
+                        isHighlighted={highlightedTaskId === task.id}
+                        isCompleting={completingTask === task.id}
+                        onComplete={completeTask}
+                        onPostpone={postponeTask}
+                        onEdit={editTask}
+                        onView={viewTask}
+                        onDelete={(taskId) => setDeleteConfirm(taskId)}
+                        onMoveUp={() => {}}
+                        onMoveDown={() => {}}
+                        onDemote={demoteTask}
+                        onDuplicate={duplicateTask}
+                        onToggleBlock={toggleBlockTask}
+                        canMoveUp={false}
+                        canMoveDown={false}
+                        isMoving={movingTask === task.id}
+                        onDragStart={() => {}}
+                        onDragEnd={handleDragEnd}
+                        onDragOver={() => {}}
+                        onDrop={() => {}}
+                        isDragOver={false}
+                        subtasks={subtasks}
+                        onUpdateDueDate={updateTaskDueDate}
+                        boards={boards.filter(b => !b.archived && b.id !== currentBoard)}
+                        onMoveToBoard={moveTaskToBoard}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Task Queue Section */}
               <div>
                 <div className="border-t border-slate-700 pt-8">
@@ -2340,7 +2388,7 @@ const App = () => {
         onAdd={async (taskTitle, dueDate, url, description) => {
           if (currentBoard) {
             try {
-              const activeCount = tasks.filter(t => t.status === 'active').length;
+              const activeCount = tasks.filter(t => t.status === 'active' && !t.isRecurring && !t.fromRecurring).length;
               const result = await api.createTask(currentBoard, taskTitle, description, dueDate, url);
               // Auto-promote if there's room in active focus
               if (activeCount < MAX_ACTIVE_TASKS && result && result.id) {

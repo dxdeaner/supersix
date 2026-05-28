@@ -46,7 +46,7 @@ function getBoards($pdo) {
     try {
         $stmt = $pdo->prepare("
             SELECT b.*, 
-                   COUNT(CASE WHEN t.status = 'active' AND (t.is_recurring IS NULL OR t.is_recurring = 0) THEN 1 END) as active_count
+                   COUNT(CASE WHEN t.status = 'active' AND (t.is_recurring IS NULL OR t.is_recurring = 0) AND (t.from_recurring IS NULL OR t.from_recurring = 0) THEN 1 END) as active_count
             FROM boards b
             LEFT JOIN tasks t ON b.id = t.board_id
             WHERE b.user_id = ?
@@ -135,7 +135,7 @@ function createBoard($pdo) {
         // Return the new board with task count
         $stmt = $pdo->prepare("
             SELECT b.*, 
-                   COUNT(CASE WHEN t.status = 'active' AND (t.is_recurring IS NULL OR t.is_recurring = 0) THEN 1 END) as active_count
+                   COUNT(CASE WHEN t.status = 'active' AND (t.is_recurring IS NULL OR t.is_recurring = 0) AND (t.from_recurring IS NULL OR t.from_recurring = 0) THEN 1 END) as active_count
             FROM boards b
             LEFT JOIN tasks t ON b.id = t.board_id
             WHERE b.id = ? AND b.user_id = ?

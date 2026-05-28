@@ -1183,7 +1183,7 @@ function generateRecurringTasks($pdo, $boardId) {
         if (!$matches) continue;
 
         // Determine status for the new instance
-        $countStmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM tasks WHERE board_id = ? AND status = 'active' AND is_recurring = 0");
+        $countStmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM tasks WHERE board_id = ? AND status = 'active' AND is_recurring = 0 AND from_recurring = 0");
         $countStmt->execute([$boardId]);
         $activeCount = $countStmt->fetch()['cnt'];
 
