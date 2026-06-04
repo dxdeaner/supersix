@@ -484,10 +484,8 @@ function deleteTask($pdo) {
             ");
             $stmt->execute([$task['board_id'], $task['position']]);
             
-            // Promote first queued task if active slots < 6
-            promoteQueuedTask($pdo, $task['board_id']);
         }
-        
+
         $pdo->commit();
         sendResponse(['message' => 'Task deleted successfully']);
     } catch (PDOException $e) {
@@ -542,8 +540,6 @@ function completeTask($pdo) {
             ");
             $stmt->execute([$task['board_id'], $task['position']]);
             
-            // Promote first queued task
-            promoteQueuedTask($pdo, $task['board_id']);
         }
 
         // Auto-log: task completed

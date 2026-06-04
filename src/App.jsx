@@ -2027,6 +2027,13 @@ const App = () => {
                         </div>
                         <div className="flex items-center space-x-3">
                           <button
+                            onClick={() => viewTask(task.id)}
+                            className="text-green-400 hover:text-green-300 text-sm"
+                            aria-label={`View ${task.title}`}
+                          >
+                            View
+                          </button>
+                          <button
                             onClick={() => duplicateTask(task.id)}
                             className="text-slate-400 hover:text-slate-300 text-sm"
                             aria-label={`Duplicate ${task.title}`}
@@ -2555,25 +2562,44 @@ const App = () => {
               {viewingTask.dueDate && (
                 <div>
                   <label className="block text-slate-400 text-xs font-medium mb-1 uppercase tracking-wider">Due Date</label>
-                  <div
-                    onClick={viewToEdit}
-                    className="flex items-center space-x-2 group/due hover:bg-slate-700/50 rounded p-1 -m-1 transition-colors cursor-pointer"
-                    title="Click to edit"
-                  >
-                    <Icon name="clock" size={14} />
-                    <span className={`text-sm ${new Date(viewingTask.dueDate) < new Date() ? 'text-red-400' : 'text-slate-300'}`}>
-                      {new Date(viewingTask.dueDate).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                    </span>
-                    <Icon name="edit-3" size={12} className="text-slate-500 opacity-0 group-hover/due:opacity-100 transition-opacity" />
-                  </div>
+                  {viewingTask.status === 'completed' ? (
+                    <div className="flex items-center space-x-2">
+                      <Icon name="clock" size={14} />
+                      <span className="text-sm text-slate-300">
+                        {new Date(viewingTask.dueDate).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={viewToEdit}
+                      className="flex items-center space-x-2 group/due hover:bg-slate-700/50 rounded p-1 -m-1 transition-colors cursor-pointer"
+                      title="Click to edit"
+                    >
+                      <Icon name="clock" size={14} />
+                      <span className={`text-sm ${new Date(viewingTask.dueDate) < new Date() ? 'text-red-400' : 'text-slate-300'}`}>
+                        {new Date(viewingTask.dueDate).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      </span>
+                      <Icon name="edit-3" size={12} className="text-slate-500 opacity-0 group-hover/due:opacity-100 transition-opacity" />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {viewingTask.status === 'completed' && (
+                <div>
+                  <label className="block text-slate-400 text-xs font-medium mb-1 uppercase tracking-wider">Completed</label>
+                  <p className="text-sm text-green-400">{new Date(viewingTask.completedAt).toLocaleString()}</p>
+                  {viewingTask.result && (
+                    <p className="text-slate-300 text-sm mt-1 italic">"{viewingTask.result}"</p>
+                  )}
                 </div>
               )}
 
               <SubtaskList
                 taskId={viewingTask.id}
                 subtasks={subtasks}
-                onToggle={toggleSubtask}
-                onUpdate={updateSubtaskTitle}
+                onToggle={viewingTask.status === 'completed' ? undefined : toggleSubtask}
+                onUpdate={viewingTask.status === 'completed' ? undefined : updateSubtaskTitle}
                 loading={loadingSubtasks[viewingTask.id]}
                 mode="view"
               />
@@ -2586,13 +2612,15 @@ const App = () => {
               >
                 Close
               </button>
-              <button
-                onClick={viewToEdit}
-                className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded transition-colors flex items-center space-x-1"
-              >
-                <Icon name="edit-3" size={14} />
-                <span>Edit</span>
-              </button>
+              {viewingTask.status !== 'completed' && (
+                <button
+                  onClick={viewToEdit}
+                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded transition-colors flex items-center space-x-1"
+                >
+                  <Icon name="edit-3" size={14} />
+                  <span>Edit</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

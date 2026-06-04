@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Icon from './Icon';
 
-const SubtaskList = ({ taskId, subtasks, onAdd = () => {}, onToggle, onDelete = () => {}, onUpdate = () => {}, loading, mode = 'edit' }) => {
+const SubtaskList = ({ taskId, subtasks, onAdd = () => {}, onToggle = () => {}, onDelete = () => {}, onUpdate = () => {}, loading, mode = 'edit' }) => {
   const [newSubtask, setNewSubtask] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
