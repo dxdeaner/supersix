@@ -1393,14 +1393,15 @@ const App = () => {
                 />
               </div>
             </div>
-            {user && (dueSummary.overdue > 0 || dueSummary.today > 0 || dueSummary.tomorrow > 0 || dueSummary.thisWeek > 0 || queuedTasks.length > 0) && (
+            {user && (dueSummary.overdue > 0 || dueSummary.today > 0 || dueSummary.tomorrow > 0 || dueSummary.thisWeek > 0 || queuedTasks.length > 0 || recurringActiveTasks.length > 0) && (
               <div className="flex items-center justify-center gap-4 px-4 py-1.5 bg-slate-800 border-b border-slate-700 text-xs shrink-0">
                 {[
-                  { key: 'overdue',  label: 'Overdue',   count: dueSummary.overdue,   color: 'text-red-400',    tasks: dueTasks.overdue },
-                  { key: 'today',    label: 'Today',     count: dueSummary.today,     color: 'text-orange-400', tasks: dueTasks.today },
-                  { key: 'tomorrow', label: 'Tomorrow',  count: dueSummary.tomorrow,  color: 'text-green-400',  tasks: dueTasks.tomorrow },
-                  { key: 'thisWeek', label: 'This week', count: dueSummary.thisWeek,  color: 'text-slate-400',  tasks: dueTasks.thisWeek },
-                  { key: 'queue',    label: 'Queue',     count: queuedTasks.length,   color: 'text-cyan-400',   tasks: queuedTasks.map(t => ({ ...t, boardId: t.boardId ?? currentBoard, boardName: boards.find(b => b.id === (t.boardId ?? currentBoard))?.name ?? '' })) },
+                  { key: 'overdue',  label: 'Overdue',   count: dueSummary.overdue,          color: 'text-red-400',    tasks: dueTasks.overdue },
+                  { key: 'today',    label: 'Today',     count: dueSummary.today,             color: 'text-orange-400', tasks: dueTasks.today },
+                  { key: 'tomorrow', label: 'Tomorrow',  count: dueSummary.tomorrow,          color: 'text-green-400',  tasks: dueTasks.tomorrow },
+                  { key: 'thisWeek', label: 'This week', count: dueSummary.thisWeek,          color: 'text-slate-400',  tasks: dueTasks.thisWeek },
+                  { key: 'queue',    label: 'Queue',     count: queuedTasks.length,           color: 'text-cyan-400',   tasks: queuedTasks.map(t => ({ ...t, boardId: t.boardId ?? currentBoard, boardName: boards.find(b => b.id === (t.boardId ?? currentBoard))?.name ?? '' })) },
+                  { key: 'recur',    label: 'Recur',     count: recurringActiveTasks.length,  color: 'text-purple-400', tasks: recurringActiveTasks.map(t => ({ ...t, boardId: t.boardId ?? currentBoard, boardName: boards.find(b => b.id === (t.boardId ?? currentBoard))?.name ?? '' })) },
                 ].filter(b => b.count > 0).map(b => (
                   <div key={b.key} className="relative" data-due-dropdown>
                     <button
@@ -1473,14 +1474,15 @@ const App = () => {
                   requestNotifPermission={requestNotifPermission}
                 />
               </div>
-              {user && (dueSummary.overdue > 0 || dueSummary.today > 0 || dueSummary.tomorrow > 0 || dueSummary.thisWeek > 0 || queuedTasks.length > 0) && (
+              {user && (dueSummary.overdue > 0 || dueSummary.today > 0 || dueSummary.tomorrow > 0 || dueSummary.thisWeek > 0 || queuedTasks.length > 0 || recurringActiveTasks.length > 0) && (
                 <div className="flex items-center gap-3 text-xs">
                   {[
-                    { key: 'overdue',  label: 'Overdue',   count: dueSummary.overdue,   color: 'text-red-400',    tasks: dueTasks.overdue },
-                    { key: 'today',    label: 'Today',     count: dueSummary.today,     color: 'text-orange-400', tasks: dueTasks.today },
-                    { key: 'tomorrow', label: 'Tomorrow',  count: dueSummary.tomorrow,  color: 'text-green-400',  tasks: dueTasks.tomorrow },
-                    { key: 'thisWeek', label: 'This week', count: dueSummary.thisWeek,  color: 'text-slate-400',  tasks: dueTasks.thisWeek },
-                    { key: 'queue',    label: 'Queue',     count: queuedTasks.length,   color: 'text-cyan-400',   tasks: queuedTasks.map(t => ({ ...t, boardId: t.boardId ?? currentBoard, boardName: boards.find(b => b.id === (t.boardId ?? currentBoard))?.name ?? '' })) },
+                    { key: 'overdue',  label: 'Overdue',   count: dueSummary.overdue,          color: 'text-red-400',    tasks: dueTasks.overdue },
+                    { key: 'today',    label: 'Today',     count: dueSummary.today,             color: 'text-orange-400', tasks: dueTasks.today },
+                    { key: 'tomorrow', label: 'Tomorrow',  count: dueSummary.tomorrow,          color: 'text-green-400',  tasks: dueTasks.tomorrow },
+                    { key: 'thisWeek', label: 'This week', count: dueSummary.thisWeek,          color: 'text-slate-400',  tasks: dueTasks.thisWeek },
+                    { key: 'queue',    label: 'Queue',     count: queuedTasks.length,           color: 'text-cyan-400',   tasks: queuedTasks.map(t => ({ ...t, boardId: t.boardId ?? currentBoard, boardName: boards.find(b => b.id === (t.boardId ?? currentBoard))?.name ?? '' })) },
+                    { key: 'recur',    label: 'Recur',     count: recurringActiveTasks.length,  color: 'text-purple-400', tasks: recurringActiveTasks.map(t => ({ ...t, boardId: t.boardId ?? currentBoard, boardName: boards.find(b => b.id === (t.boardId ?? currentBoard))?.name ?? '' })) },
                   ].filter(b => b.count > 0).map(b => (
                     <div key={b.key} className="relative" data-due-dropdown>
                       <button
