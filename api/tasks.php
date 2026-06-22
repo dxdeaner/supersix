@@ -162,11 +162,26 @@ function getDueSummary($pdo) {
         $stmt->execute([$userId]);
         $row = $stmt->fetch();
 
+        // Queue and Recur counts span all boards (not just the active one)
+        $stmt2 = $pdo->prepare("
+            SELECT
+                SUM(CASE WHEN t.status = 'queued' AND t.is_recurring = 0 THEN 1 ELSE 0 END) AS queued,
+                SUM(CASE WHEN t.status = 'active' AND t.from_recurring = 1 THEN 1 ELSE 0 END) AS recur
+            FROM tasks t
+            JOIN boards b ON t.board_id = b.id
+            WHERE b.user_id = ?
+              AND b.archived = 0
+        ");
+        $stmt2->execute([$userId]);
+        $row2 = $stmt2->fetch();
+
         sendResponse([
             'overdue'  => (int)($row['overdue'] ?? 0),
             'today'    => (int)($row['today'] ?? 0),
             'tomorrow' => (int)($row['tomorrow'] ?? 0),
             'thisWeek' => (int)($row['this_week'] ?? 0),
+            'queued'   => (int)($row2['queued'] ?? 0),
+            'recur'    => (int)($row2['recur'] ?? 0),
         ]);
     } catch (PDOException $e) {
         error_log("Get due summary error: " . $e->getMessage());
@@ -203,7 +218,7 @@ function getDueTasks($pdo) {
         $stmt->execute([$userId]);
         $rows = $stmt->fetchAll();
 
-        $grouped = ['overdue' => [], 'today' => [], 'tomorrow' => [], 'thisWeek' => []];
+        $grouped = ['overdue' => [], 'today' => [], 'tomorrow' => [], 'thisWeek' => [], 'queue' => [], 'recur' => []];
         foreach ($rows as $r) {
             $bucket = $r['bucket'];
             if ($bucket && isset($grouped[$bucket])) {
@@ -215,6 +230,31 @@ function getDueTasks($pdo) {
                     'dueDate'   => toIsoUtc($r['due_date']),
                 ];
             }
+        }
+
+        // Queued and recurring-active tasks span all boards (not just the active one)
+        $qrStmt = $pdo->prepare("
+            SELECT t.id, t.title, t.board_id, b.name AS board_name, t.status, t.from_recurring
+            FROM tasks t
+            JOIN boards b ON t.board_id = b.id
+            WHERE b.user_id = ?
+              AND b.archived = 0
+              AND (
+                (t.status = 'queued' AND t.is_recurring = 0)
+                OR (t.status = 'active' AND t.from_recurring = 1)
+              )
+            ORDER BY t.position ASC
+            LIMIT 100
+        ");
+        $qrStmt->execute([$userId]);
+        foreach ($qrStmt->fetchAll() as $r) {
+            $item = [
+                'id'        => (int)$r['id'],
+                'title'     => $r['title'],
+                'boardId'   => (int)$r['board_id'],
+                'boardName' => $r['board_name'],
+            ];
+            $grouped[$r['status'] === 'queued' ? 'queue' : 'recur'][] = $item;
         }
 
         sendResponse($grouped);
