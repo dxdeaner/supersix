@@ -49,7 +49,7 @@ export default defineConfig({
           },
         ],
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/\.well-known\//],
       },
     }),
   ],
