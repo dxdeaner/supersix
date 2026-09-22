@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Icon from './Icon';
+import useNow from '../hooks/useNow';
+import { summarizeTaskTime, entryMs, formatClock, formatMinutes } from '../utils/timeTracking';
 
 const CONFETTI_COLORS = ['#22d3ee', '#f97316', '#22c55e', '#eab308', '#a855f7', '#ec4899'];
 const CONFETTI_PIECES = Array.from({ length: 12 }, (_, i) => {
@@ -30,13 +32,16 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return { value, label };
 });
 
-const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, onDuplicate, onToggleBlock, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks, onUpdateDueDate, boards = [], onMoveToBoard }) => {
+const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, onDuplicate, onToggleBlock, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks, onUpdateDueDate, boards = [], onMoveToBoard, timeEntries = [], runningEntry = null, onStartTimer, onStopTimer }) => {
   const [expanded, setExpanded] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('09:00');
   const [movingBoard, setMovingBoard] = useState(false);
   const movingBoardRef = useRef(null);
+  const isTimerRunning = runningEntry?.taskId === task.id;
+  const now = useNow(isTimerRunning);
+  const timeSummary = timeEntries.length > 0 ? summarizeTaskTime(timeEntries, now) : null;
 
   useEffect(() => {
     if (!movingBoard) return;
@@ -262,6 +267,27 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
               <Icon name="eye" size={14} />
               <span>View</span>
             </button>
+            {onStartTimer && (
+              isTimerRunning ? (
+                <button
+                  onClick={onStopTimer}
+                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center space-x-1.5"
+                  title="Stop timer"
+                >
+                  <Icon name="square" size={12} />
+                  <span className="font-mono tabular-nums">{formatClock(entryMs(runningEntry, now))}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => onStartTimer(task.id)}
+                  className="border border-green-600 text-green-500 hover:bg-green-600 hover:text-white bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
+                  title="Start timer"
+                >
+                  <Icon name="play" size={12} />
+                  <span>Track</span>
+                </button>
+              )
+            )}
             <button
               onClick={() => onDemote(task.id)}
               className="border border-slate-500 text-slate-500 hover:border-slate-400 hover:text-slate-400 bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
@@ -331,10 +357,20 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
               <Icon name="trash-2" size={16} />
             </button>
           </div>
-          {/* Subtask Badge */}
-          {subtasks[task.id] && subtasks[task.id].length > 0 && (
+          {/* Subtask + time badges */}
+          {((subtasks[task.id] && subtasks[task.id].length > 0) || timeSummary) && (
             <div className="mt-3 pt-3 border-t border-slate-700">
               <div className="flex items-center space-x-2">
+                {timeSummary && (
+                  <div
+                    className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${isTimerRunning ? 'bg-green-600/20 text-green-300' : 'bg-slate-700 text-slate-300'}`}
+                    title="Billed time (daily totals rounded up to 15 min)"
+                  >
+                    <Icon name="clock" size={12} />
+                    <span>{formatMinutes(timeSummary.billedMinutes)}</span>
+                  </div>
+                )}
+                {subtasks[task.id] && subtasks[task.id].length > 0 && (<>
                 <div className="bg-slate-700 text-slate-300 px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1">
                   <Icon name="check" size={12} />
                   <span>
@@ -351,6 +387,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
                     />
                   </div>
                 )}
+                </>)}
               </div>
             </div>
           )}

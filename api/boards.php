@@ -62,6 +62,7 @@ function getBoards($pdo) {
                 'id' => (int)$board['id'],
                 'name' => $board['name'],
                 'color' => $board['color'],
+                'hourlyRate' => isset($board['hourly_rate']) ? (float)$board['hourly_rate'] : null,
                 'archived' => (bool)$board['archived'],
                 'active_count' => (int)$board['active_count'],
                 'createdAt' => toIsoUtc($board['created_at'])
@@ -148,6 +149,7 @@ function createBoard($pdo) {
             'id' => (int)$board['id'],
             'name' => $board['name'],
             'color' => $board['color'],
+            'hourlyRate' => isset($board['hourly_rate']) ? (float)$board['hourly_rate'] : null,
             'archived' => (bool)$board['archived'],
             'active_count' => (int)$board['active_count'],
             'createdAt' => toIsoUtc($board['created_at'])
@@ -170,21 +172,29 @@ function updateBoard($pdo) {
 
     enforceMaxLengths($data, ['name' => MAX_LENGTHS['board_name']]);
 
+    // Optional hourly rate (null/'' clears it); only touched when the key is sent
+    $updateRate = array_key_exists('hourly_rate', $data);
+    $rate = null;
+    if ($updateRate && $data['hourly_rate'] !== null && $data['hourly_rate'] !== '') {
+        if (!is_numeric($data['hourly_rate']) || (float)$data['hourly_rate'] < 0 || (float)$data['hourly_rate'] > 99999999.99) {
+            sendResponse(['error' => 'Hourly rate must be a positive number'], 400);
+        }
+        $rate = round((float)$data['hourly_rate'], 2);
+    }
+
     try {
-        $stmt = $pdo->prepare("
-            UPDATE boards
-            SET name = ?
-            WHERE id = ? AND user_id = ?
-        ");
-        
-        $result = $stmt->execute([
-            trim($data['name']),
-            $data['id'],
-            $userId
-        ]);
-        
-        if ($stmt->rowCount() === 0) {
+        $stmt = $pdo->prepare("SELECT id FROM boards WHERE id = ? AND user_id = ?");
+        $stmt->execute([$data['id'], $userId]);
+        if (!$stmt->fetch()) {
             sendResponse(['error' => 'Board not found or access denied'], 404);
+        }
+
+        if ($updateRate) {
+            $stmt = $pdo->prepare("UPDATE boards SET name = ?, hourly_rate = ? WHERE id = ? AND user_id = ?");
+            $stmt->execute([trim($data['name']), $rate, $data['id'], $userId]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE boards SET name = ? WHERE id = ? AND user_id = ?");
+            $stmt->execute([trim($data['name']), $data['id'], $userId]);
         }
         
         sendResponse(['message' => 'Board updated successfully']);

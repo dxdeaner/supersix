@@ -14,6 +14,9 @@ import CompletionModal from './components/CompletionModal';
 import OfflineIndicator from './components/OfflineIndicator';
 import ReloadPrompt from './components/ReloadPrompt';
 import ReportView from './components/ReportView';
+import TimeTracker from './components/TimeTracker';
+import RunningTimer from './components/RunningTimer';
+import { groupEntriesByTask } from './utils/timeTracking';
 import useFocusTrap from './hooks/useFocusTrap';
 import { useNotifications } from './hooks/useNotifications';
 
@@ -309,6 +312,10 @@ const App = () => {
   const [openDueBucket, setOpenDueBucket] = useState(null);
   const [highlightedTaskId, setHighlightedTaskId] = useState(null);
 
+  // Time tracking state
+  const [runningEntry, setRunningEntry] = useState(null);
+  const [boardTimeEntries, setBoardTimeEntries] = useState({}); // taskId -> entries
+
   const loadReport = async (start, end) => {
     setReportLoading(true);
     try {
@@ -422,6 +429,14 @@ const App = () => {
     }
   }, [user]);
 
+  // Re-sync the running timer when the window regains focus (may have changed on another device)
+  useEffect(() => {
+    if (!user) return;
+    const onFocus = () => loadRunningTimer();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [user]);
+
   // Load tasks when board changes
   useEffect(() => {
     if (currentBoard && user) {
@@ -522,6 +537,7 @@ const App = () => {
       const boardsData = await api.getBoards();
       setBoards(boardsData);
       loadDueSummary();
+      loadRunningTimer();
       if (boardsData.length > 0 && !currentBoard) {
         switchBoard(boardsData[0].id);
       }
@@ -540,6 +556,7 @@ const App = () => {
     try {
       const tasksData = await api.getTasks(currentBoard);
       setTasks(tasksData);
+      loadBoardTime(currentBoard);
 
       // Force subtask loading after a small delay to ensure state updates
       setTimeout(() => {
@@ -557,6 +574,57 @@ const App = () => {
     }
   };
 
+  // Time tracking
+  const loadRunningTimer = async () => {
+    try {
+      const { entry } = await api.getRunningTimer();
+      setRunningEntry(entry);
+    } catch (err) {
+      console.error('Error loading running timer:', err);
+    }
+  };
+
+  const loadBoardTime = async (boardId = currentBoard) => {
+    if (!boardId) return;
+    try {
+      const entries = await api.getBoardTime(boardId);
+      setBoardTimeEntries(groupEntriesByTask(entries));
+    } catch (err) {
+      console.error('Error loading time entries:', err);
+    }
+  };
+
+  const refreshTime = () => {
+    loadRunningTimer();
+    loadBoardTime();
+  };
+
+  const startTimer = async (taskId) => {
+    try {
+      const { entry } = await api.startTimer(taskId);
+      setRunningEntry(entry);
+      loadBoardTime();
+    } catch (err) {
+      setError('Failed to start timer: ' + err.message);
+    }
+  };
+
+  const stopTimer = async () => {
+    try {
+      await api.stopTimer();
+      setRunningEntry(null);
+      loadBoardTime();
+    } catch (err) {
+      setError('Failed to stop timer: ' + err.message);
+    }
+  };
+
+  const openRunningTask = () => {
+    if (!runningEntry) return;
+    switchBoard(runningEntry.boardId);
+    viewTask(runningEntry.taskId);
+  };
+
   const createBoard = async () => {
     if (!newBoardName.trim()) return;
 
@@ -571,11 +639,14 @@ const App = () => {
     }
   };
 
-  const editBoard = async (boardId, newName) => {
+  const editBoard = async (boardId, newName, hourlyRate = undefined) => {
     if (!newName.trim()) return;
 
     try {
-      await api.updateBoard(boardId, newName.trim());
+      const current = boards.find(b => b.id === boardId)?.hourlyRate ?? null;
+      let rate = hourlyRate === undefined ? undefined : (hourlyRate.trim() === '' ? null : Number(hourlyRate.trim()));
+      if (rate === current) rate = undefined; // unchanged — don't send
+      await api.updateBoard(boardId, newName.trim(), rate);
       await loadBoards();
       setEditingBoard(null);
     } catch (err) {
@@ -647,6 +718,7 @@ const App = () => {
     const taskId = showCompletionModal;
     const task = tasks.find(t => t.id === taskId);
     setShowCompletionModal(null);
+    if (runningEntry?.taskId === taskId) await stopTimer();
     await completeTaskInner(taskId, result || null);
 
     // Create follow-up task if provided
@@ -692,6 +764,7 @@ const App = () => {
   const deleteTask = withOptimistic(
     (taskId) => api.deleteTask(taskId),
     (taskId) => {
+      if (runningEntry?.taskId === taskId) stopTimer();
       setTasks(prev => prev.filter(t => t.id !== taskId));
       setDeleteConfirm(null);
     },
@@ -1289,7 +1362,7 @@ const App = () => {
                   >
                     <button
                       onClick={() => {
-                        setEditingBoard({ id: board.id, name: board.name });
+                        setEditingBoard({ id: board.id, name: board.name, hourlyRate: board.hourlyRate != null ? String(board.hourlyRate) : '' });
                         setBoardMenuOpen(null);
                       }}
                       className="w-full px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-600 hover:text-white flex items-center space-x-2 rounded-t-lg"
@@ -1384,6 +1457,9 @@ const App = () => {
                     </button>
                   </>
                 )}
+                {user && (
+                  <RunningTimer entry={runningEntry} onStop={stopTimer} onOpen={openRunningTask} compact={windowWidth < 640} />
+                )}
                 <UserHeader
                   user={user}
                   onLogout={handleLogout}
@@ -1465,6 +1541,9 @@ const App = () => {
                       <span className="text-sm font-medium">Report</span>
                     </button>
                   </>
+                )}
+                {user && (
+                  <RunningTimer entry={runningEntry} onStop={stopTimer} onOpen={openRunningTask} compact={windowWidth < 640} />
                 )}
                 <UserHeader
                   user={user}
@@ -1822,6 +1901,10 @@ const App = () => {
                         onUpdateDueDate={updateTaskDueDate}
                         boards={boards.filter(b => !b.archived && b.id !== currentBoard)}
                         onMoveToBoard={moveTaskToBoard}
+                        timeEntries={boardTimeEntries[task.id]}
+                        runningEntry={runningEntry}
+                        onStartTimer={startTimer}
+                        onStopTimer={stopTimer}
                       />
                     ) : (
                       <div
@@ -1880,6 +1963,10 @@ const App = () => {
                         onUpdateDueDate={updateTaskDueDate}
                         boards={boards.filter(b => !b.archived && b.id !== currentBoard)}
                         onMoveToBoard={moveTaskToBoard}
+                        timeEntries={boardTimeEntries[task.id]}
+                        runningEntry={runningEntry}
+                        onStartTimer={startTimer}
+                        onStopTimer={stopTimer}
                       />
                     ))}
                   </div>
@@ -2478,7 +2565,7 @@ const App = () => {
             aria-labelledby="edit-board-title"
             className="bg-slate-800 rounded-lg p-6 max-w-md mx-4 border border-slate-700 w-full"
           >
-            <h3 id="edit-board-title" className="text-white font-semibold mb-4">Rename Board</h3>
+            <h3 id="edit-board-title" className="text-white font-semibold mb-4">Edit Board</h3>
 
             <div className="space-y-4">
               <div>
@@ -2487,9 +2574,28 @@ const App = () => {
                   type="text"
                   value={editingBoard.name}
                   onChange={(e) => setEditingBoard({ ...editingBoard, name: e.target.value })}
-                  onKeyPress={(e) => e.key === 'Enter' && editBoard(editingBoard.id, editingBoard.name)}
+                  onKeyPress={(e) => e.key === 'Enter' && editBoard(editingBoard.id, editingBoard.name, editingBoard.hourlyRate)}
                   className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
                 />
+              </div>
+              <div>
+                <label className="block text-slate-300 text-sm font-medium mb-1">Default Hourly Rate (USD)</label>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-400">$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={editingBoard.hourlyRate ?? ''}
+                    onChange={(e) => setEditingBoard({ ...editingBoard, hourlyRate: e.target.value })}
+                    onKeyPress={(e) => e.key === 'Enter' && editBoard(editingBoard.id, editingBoard.name, editingBoard.hourlyRate)}
+                    placeholder="None"
+                    className="w-32 bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white focus:outline-none focus:border-cyan-400"
+                  />
+                  <span className="text-slate-400 text-sm">/hr</span>
+                </div>
+                <p className="text-slate-500 text-xs mt-1">Tasks can override this in their Time section.</p>
               </div>
             </div>
 
@@ -2501,7 +2607,7 @@ const App = () => {
                 Cancel
               </button>
               <button
-                onClick={() => editBoard(editingBoard.id, editingBoard.name)}
+                onClick={() => editBoard(editingBoard.id, editingBoard.name, editingBoard.hourlyRate)}
                 disabled={!editingBoard.name.trim()}
                 className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded transition-colors"
               >
@@ -2604,6 +2710,14 @@ const App = () => {
                 onUpdate={viewingTask.status === 'completed' ? undefined : updateSubtaskTitle}
                 loading={loadingSubtasks[viewingTask.id]}
                 mode="view"
+              />
+
+              <TimeTracker
+                task={viewingTask}
+                runningEntry={runningEntry}
+                onStart={startTimer}
+                onStop={stopTimer}
+                onChanged={refreshTime}
               />
             </div>
 

@@ -34,6 +34,8 @@ const iconPaths = {
   'file-text': 'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
   'clipboard': 'M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2M9 2h6a1 1 0 011 1v2a1 1 0 01-1 1H9a1 1 0 01-1-1V3a1 1 0 011-1z',
   'alert-circle': 'M12 22a10 10 0 100-20 10 10 0 000 20zM12 8v4M12 16h.01',
+  'play': 'M6 4l14 8-14 8V4z',
+  'square': 'M6 6h12v12H6z',
 };
 
 const Icon = ({ name, size = 16, className = '', ...props }) => (

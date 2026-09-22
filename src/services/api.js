@@ -121,10 +121,13 @@ const api = {
     });
   },
 
-  async updateBoard(id, name) {
+  async updateBoard(id, name, hourlyRate = undefined) {
     return this.request('/boards.php', {
       method: 'PUT',
-      body: JSON.stringify({ id, name }),
+      body: JSON.stringify({
+        id, name,
+        ...(hourlyRate !== undefined && { hourly_rate: hourlyRate }),
+      }),
     });
   },
 
@@ -321,6 +324,59 @@ const api = {
 
   async getLookingAhead() {
     return this.request('/tasks.php?action=looking_ahead');
+  },
+
+  // Time tracking endpoints
+  async getRunningTimer() {
+    return this.request('/time.php?action=running');
+  },
+
+  async getTaskTime(taskId) {
+    return this.request(`/time.php?task_id=${taskId}`);
+  },
+
+  async getBoardTime(boardId) {
+    return this.request(`/time.php?board_id=${boardId}`);
+  },
+
+  async startTimer(taskId) {
+    return this.request('/time.php?action=start', {
+      method: 'POST',
+      body: JSON.stringify({ task_id: taskId }),
+    });
+  },
+
+  async stopTimer() {
+    return this.request('/time.php?action=stop', {
+      method: 'POST',
+    });
+  },
+
+  async createTimeEntry(taskId, startedAt, endedAt, note = null) {
+    return this.request('/time.php?action=create', {
+      method: 'POST',
+      body: JSON.stringify({ task_id: taskId, startedAt, endedAt, note }),
+    });
+  },
+
+  async updateTimeEntry(id, startedAt, endedAt, note = null) {
+    return this.request('/time.php', {
+      method: 'PUT',
+      body: JSON.stringify({ id, startedAt, endedAt, note }),
+    });
+  },
+
+  async deleteTimeEntry(id) {
+    return this.request(`/time.php?id=${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async setTaskRate(taskId, rate) {
+    return this.request('/time.php?action=task_rate', {
+      method: 'POST',
+      body: JSON.stringify({ task_id: taskId, rate }),
+    });
   },
 };
 
