@@ -1,5 +1,14 @@
 const API_BASE_URL = '/api';
 
+// User's IANA timezone — lets the server bucket time entries by local day
+const userTimezone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+};
+
 const api = {
   onAuthFailure: null,
   csrfToken: null,
@@ -342,20 +351,21 @@ const api = {
   async startTimer(taskId) {
     return this.request('/time.php?action=start', {
       method: 'POST',
-      body: JSON.stringify({ task_id: taskId }),
+      body: JSON.stringify({ task_id: taskId, tz: userTimezone() }),
     });
   },
 
   async stopTimer() {
     return this.request('/time.php?action=stop', {
       method: 'POST',
+      body: JSON.stringify({ tz: userTimezone() }),
     });
   },
 
   async createTimeEntry(taskId, startedAt, endedAt, note = null) {
     return this.request('/time.php?action=create', {
       method: 'POST',
-      body: JSON.stringify({ task_id: taskId, startedAt, endedAt, note }),
+      body: JSON.stringify({ task_id: taskId, startedAt, endedAt, note, tz: userTimezone() }),
     });
   },
 

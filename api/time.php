@@ -209,11 +209,30 @@ function formatLoggedMinutes($minutes) {
     return $m === 0 ? $h . 'h' : $h . 'h ' . $m . 'm';
 }
 
-/** Write a "time_logged" journal auto-entry for a finished time entry (skips < 1 min). */
-function logTimeToJournal($pdo, $userId, $entryId, $manual = false) {
+/** Seconds → billed minutes (rounded up to 15-min increments, same rule as the client). */
+function billedMinutes($seconds) {
+    return $seconds <= 0 ? 0 : (int)ceil($seconds / 900) * 15;
+}
+
+/** Timezone sent by the client ('tz'), falling back to UTC. */
+function requestTimezone($data) {
+    $tz = is_array($data) ? ($data['tz'] ?? '') : '';
+    try {
+        return new DateTimeZone(is_string($tz) && $tz !== '' ? $tz : 'UTC');
+    } catch (Exception $e) {
+        return new DateTimeZone('UTC');
+    }
+}
+
+/**
+ * Write a "time_logged" journal auto-entry for a finished time entry, noting its
+ * billed duration: how much it adds to the task's billed total for that local day
+ * (daily totals round up to 15 min). Skips entries under a minute.
+ */
+function logTimeToJournal($pdo, $userId, $entryId, DateTimeZone $tz, $manual = false) {
     try {
         $stmt = $pdo->prepare("
-            SELECT te.note, TIMESTAMPDIFF(SECOND, te.started_at, te.ended_at) AS seconds,
+            SELECT te.note, te.started_at, TIMESTAMPDIFF(SECOND, te.started_at, te.ended_at) AS seconds,
                    t.id AS task_id, t.title AS task_title, b.id AS board_id, b.name AS board_name
             FROM time_entries te
             JOIN tasks t ON te.task_id = t.id
@@ -224,10 +243,33 @@ function logTimeToJournal($pdo, $userId, $entryId, $manual = false) {
         $row = $stmt->fetch();
         if (!$row) return;
 
-        $minutes = intdiv((int)$row['seconds'], 60);
-        if ($minutes < 1) return;
+        $seconds = (int)$row['seconds'];
+        if ($seconds < 60) return;
 
-        $content = 'Logged ' . formatLoggedMinutes($minutes) . ' on "' . $row['task_title'] . '"';
+        // Local-day bounds (in UTC) for the day this entry started
+        $utc = new DateTimeZone('UTC');
+        $dayStart = (new DateTime($row['started_at'], $utc))->setTimezone($tz)->setTime(0, 0, 0);
+        $dayEnd = (clone $dayStart)->modify('+1 day');
+        $dayStart->setTimezone($utc);
+        $dayEnd->setTimezone($utc);
+
+        // Task's finished time that day, excluding this entry
+        $sumStmt = $pdo->prepare("
+            SELECT COALESCE(SUM(TIMESTAMPDIFF(SECOND, started_at, ended_at)), 0)
+            FROM time_entries
+            WHERE user_id = ? AND task_id = ? AND id != ? AND ended_at IS NOT NULL
+              AND started_at >= ? AND started_at < ?
+        ");
+        $sumStmt->execute([$userId, $row['task_id'], $entryId,
+            $dayStart->format('Y-m-d H:i:s'), $dayEnd->format('Y-m-d H:i:s')]);
+        $otherSeconds = (int)$sumStmt->fetchColumn();
+
+        $billedAdded = billedMinutes($otherSeconds + $seconds) - billedMinutes($otherSeconds);
+
+        $content = 'Logged ' . formatLoggedMinutes($billedAdded) . ' billed on "' . $row['task_title'] . '"';
+        if ($billedAdded === 0) {
+            $content .= " (within the day's current 15-min block)";
+        }
         if ($manual) {
             $content .= ' (manual entry)';
         }
@@ -244,7 +286,7 @@ function logTimeToJournal($pdo, $userId, $entryId, $manual = false) {
 }
 
 /** Stop any running timer for the user and journal the finished entries. */
-function stopRunningAndLog($pdo, $userId) {
+function stopRunningAndLog($pdo, $userId, DateTimeZone $tz) {
     $stmt = $pdo->prepare("SELECT id FROM time_entries WHERE user_id = ? AND ended_at IS NULL");
     $stmt->execute([$userId]);
     $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -253,7 +295,7 @@ function stopRunningAndLog($pdo, $userId) {
     $pdo->prepare("UPDATE time_entries SET ended_at = UTC_TIMESTAMP() WHERE user_id = ? AND ended_at IS NULL")
         ->execute([$userId]);
     foreach ($ids as $id) {
-        logTimeToJournal($pdo, $userId, (int)$id);
+        logTimeToJournal($pdo, $userId, (int)$id, $tz);
     }
 }
 
@@ -325,7 +367,7 @@ function startTimer($pdo, $userId) {
         }
 
         // Only one timer at a time — stop whatever is running
-        stopRunningAndLog($pdo, $userId);
+        stopRunningAndLog($pdo, $userId, requestTimezone($data));
 
         $pdo->prepare("INSERT INTO time_entries (user_id, task_id, started_at) VALUES (?, ?, UTC_TIMESTAMP())")
             ->execute([$userId, $taskId]);
@@ -339,7 +381,7 @@ function startTimer($pdo, $userId) {
 
 function stopTimer($pdo, $userId) {
     try {
-        stopRunningAndLog($pdo, $userId);
+        stopRunningAndLog($pdo, $userId, requestTimezone(getJsonInput()));
         sendResponse(['entry' => null]);
     } catch (PDOException $e) {
         error_log("Stop timer error: " . $e->getMessage());
@@ -366,7 +408,7 @@ function createEntry($pdo, $userId) {
             ->execute([$userId, $taskId, $start, $end, $note]);
 
         $entryId = (int)$pdo->lastInsertId();
-        logTimeToJournal($pdo, $userId, $entryId, true);
+        logTimeToJournal($pdo, $userId, $entryId, requestTimezone($data), true);
 
         $entry = requireOwnedEntry($pdo, $userId, $entryId);
         sendResponse(formatEntry($entry), 201);
