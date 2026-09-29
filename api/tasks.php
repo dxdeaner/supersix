@@ -1246,6 +1246,27 @@ function generateRecurringTasks($pdo, $boardId) {
             $template['url'],
         ]);
 
+        $newTaskId = $pdo->lastInsertId();
+
+        // Copy the template's checklist/subtasks to the new instance (reset to incomplete)
+        $subStmt = $pdo->prepare("
+            SELECT title, position FROM subtasks
+            WHERE task_id = ?
+            ORDER BY position ASC, created_at ASC
+        ");
+        $subStmt->execute([$template['id']]);
+        $templateSubtasks = $subStmt->fetchAll();
+
+        if ($templateSubtasks) {
+            $copyStmt = $pdo->prepare("
+                INSERT INTO subtasks (task_id, title, position, completed)
+                VALUES (?, ?, ?, 0)
+            ");
+            foreach ($templateSubtasks as $sub) {
+                $copyStmt->execute([$newTaskId, $sub['title'], $sub['position']]);
+            }
+        }
+
         $updateStmt = $pdo->prepare("UPDATE tasks SET recurrence_last_date = ? WHERE id = ?");
         $updateStmt->execute([$today, $template['id']]);
     }
