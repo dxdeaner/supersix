@@ -3,6 +3,7 @@
 // Timestamps are stored in UTC. Billing (15-min rounding of each day's total)
 // is computed client-side so "day" follows the user's local timezone.
 require_once 'config.php';
+require_once __DIR__ . '/journal_helper.php';
 
 // Start secure session
 startSecureSession();
@@ -200,6 +201,62 @@ function fetchRunning($pdo, $userId) {
     ];
 }
 
+/** 83 minutes → "1h 23m" */
+function formatLoggedMinutes($minutes) {
+    $h = intdiv($minutes, 60);
+    $m = $minutes % 60;
+    if ($h === 0) return $m . 'm';
+    return $m === 0 ? $h . 'h' : $h . 'h ' . $m . 'm';
+}
+
+/** Write a "time_logged" journal auto-entry for a finished time entry (skips < 1 min). */
+function logTimeToJournal($pdo, $userId, $entryId, $manual = false) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT te.note, TIMESTAMPDIFF(SECOND, te.started_at, te.ended_at) AS seconds,
+                   t.id AS task_id, t.title AS task_title, b.id AS board_id, b.name AS board_name
+            FROM time_entries te
+            JOIN tasks t ON te.task_id = t.id
+            JOIN boards b ON t.board_id = b.id
+            WHERE te.id = ? AND te.user_id = ? AND te.ended_at IS NOT NULL
+        ");
+        $stmt->execute([$entryId, $userId]);
+        $row = $stmt->fetch();
+        if (!$row) return;
+
+        $minutes = intdiv((int)$row['seconds'], 60);
+        if ($minutes < 1) return;
+
+        $content = 'Logged ' . formatLoggedMinutes($minutes) . ' on "' . $row['task_title'] . '"';
+        if ($manual) {
+            $content .= ' (manual entry)';
+        }
+        if (!empty($row['note'])) {
+            $content .= ' — ' . $row['note'];
+        }
+
+        insertJournalAutoLog($pdo, $userId, 'time_logged', $content,
+            (int)$row['board_id'], $row['board_name'], (int)$row['task_id'], $row['task_title'],
+            null, 2);
+    } catch (PDOException $e) {
+        error_log("Time journal log error: " . $e->getMessage());
+    }
+}
+
+/** Stop any running timer for the user and journal the finished entries. */
+function stopRunningAndLog($pdo, $userId) {
+    $stmt = $pdo->prepare("SELECT id FROM time_entries WHERE user_id = ? AND ended_at IS NULL");
+    $stmt->execute([$userId]);
+    $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    if (!$ids) return;
+
+    $pdo->prepare("UPDATE time_entries SET ended_at = UTC_TIMESTAMP() WHERE user_id = ? AND ended_at IS NULL")
+        ->execute([$userId]);
+    foreach ($ids as $id) {
+        logTimeToJournal($pdo, $userId, (int)$id);
+    }
+}
+
 // ── Endpoints ───────────────────────────────────────────────────────
 
 function getRunningEntry($pdo, $userId) {
@@ -268,8 +325,7 @@ function startTimer($pdo, $userId) {
         }
 
         // Only one timer at a time — stop whatever is running
-        $pdo->prepare("UPDATE time_entries SET ended_at = UTC_TIMESTAMP() WHERE user_id = ? AND ended_at IS NULL")
-            ->execute([$userId]);
+        stopRunningAndLog($pdo, $userId);
 
         $pdo->prepare("INSERT INTO time_entries (user_id, task_id, started_at) VALUES (?, ?, UTC_TIMESTAMP())")
             ->execute([$userId, $taskId]);
@@ -283,8 +339,7 @@ function startTimer($pdo, $userId) {
 
 function stopTimer($pdo, $userId) {
     try {
-        $pdo->prepare("UPDATE time_entries SET ended_at = UTC_TIMESTAMP() WHERE user_id = ? AND ended_at IS NULL")
-            ->execute([$userId]);
+        stopRunningAndLog($pdo, $userId);
         sendResponse(['entry' => null]);
     } catch (PDOException $e) {
         error_log("Stop timer error: " . $e->getMessage());
@@ -310,7 +365,10 @@ function createEntry($pdo, $userId) {
         $pdo->prepare("INSERT INTO time_entries (user_id, task_id, started_at, ended_at, note) VALUES (?, ?, ?, ?, ?)")
             ->execute([$userId, $taskId, $start, $end, $note]);
 
-        $entry = requireOwnedEntry($pdo, $userId, (int)$pdo->lastInsertId());
+        $entryId = (int)$pdo->lastInsertId();
+        logTimeToJournal($pdo, $userId, $entryId, true);
+
+        $entry = requireOwnedEntry($pdo, $userId, $entryId);
         sendResponse(formatEntry($entry), 201);
     } catch (PDOException $e) {
         error_log("Create time entry error: " . $e->getMessage());
