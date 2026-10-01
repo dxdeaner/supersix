@@ -4,7 +4,7 @@ import Icon from './Icon';
 import api from '../services/api';
 import useNow from '../hooks/useNow';
 import {
-  summarizeTaskTime, effectiveRate, billedAmount,
+  summarizeTaskTime, effectiveRate, billedAmount, entryMs,
   formatMinutes, formatRawMs, formatUsd, formatDayLabel, formatTimeOfDay,
 } from '../utils/timeTracking';
 
@@ -42,7 +42,9 @@ const csvCell = (value) => {
 
 // ─── Aggregation ─────────────────────────────────────────────────────────────
 
-function buildReport(entries, now) {
+// filter: 'all' | 'unbilled' | 'invoiced'. Day/task billedMinutes and amounts reflect the filter.
+// Unbilled time is priced at the current rate; invoiced time at the rate saved on its invoice.
+function buildReport(entries, now, filter = 'all') {
   const taskMap = new Map();
   entries.forEach(e => {
     if (!taskMap.has(e.taskId)) {
@@ -63,15 +65,39 @@ function buildReport(entries, now) {
   const tasks = [...taskMap.values()].map(t => {
     const summary = summarizeTaskTime(t.entries, now);
     const rate = effectiveRate(t.taskRate, t.boardRate);
+
+    const days = summary.days.map(day => {
+      const invoicedRate = day.entries.find(e => e.invoiceId && e.invoicedRate != null)?.invoicedRate ?? rate;
+      const unbilledAmt = billedAmount(day.unbilledMinutes, rate);
+      const invoicedAmt = billedAmount(day.invoicedMinutes, invoicedRate);
+      let minutes, amount, dayEntries;
+      if (filter === 'unbilled') {
+        minutes = day.unbilledMinutes; amount = unbilledAmt;
+        dayEntries = day.entries.filter(e => !e.invoiceId);
+      } else if (filter === 'invoiced') {
+        minutes = day.invoicedMinutes; amount = invoicedAmt;
+        dayEntries = day.entries.filter(e => e.invoiceId);
+      } else {
+        minutes = day.billedMinutes;
+        amount = unbilledAmt == null && invoicedAmt == null ? null : (unbilledAmt || 0) + (invoicedAmt || 0);
+        dayEntries = day.entries;
+      }
+      const rawMs = dayEntries.reduce((sum, e) => sum + entryMs(e, now), 0);
+      return { ...day, billedMinutes: minutes, amount, rawMs, entries: dayEntries };
+    }).filter(day => day.entries.length > 0);
+
+    const priced = days.filter(d => d.amount != null);
     return {
       ...t,
-      ...summary,
+      days,
+      rawMs: days.reduce((sum, d) => sum + d.rawMs, 0),
+      billedMinutes: days.reduce((sum, d) => sum + d.billedMinutes, 0),
       rate,
       rateSource: t.taskRate != null ? 'task' : t.boardRate != null ? 'board' : null,
-      amount: billedAmount(summary.billedMinutes, rate),
-      running: t.entries.some(e => !e.endedAt),
+      amount: priced.length ? priced.reduce((sum, d) => sum + d.amount, 0) : null,
+      running: days.some(d => d.entries.some(e => !e.endedAt)),
     };
-  });
+  }).filter(t => t.days.length > 0);
 
   const boardMap = new Map();
   tasks.forEach(t => {
@@ -108,7 +134,7 @@ function buildCsv(boards) {
   const rows = [];
   boards.forEach(b => b.tasks.forEach(t => t.days.forEach(day => {
     const notes = day.entries.map(e => e.note).filter(Boolean).join('; ');
-    const amount = billedAmount(day.billedMinutes, t.rate);
+    const amount = day.amount;
     rows.push([
       day.date, b.name, t.title,
       (day.rawMs / 3600000).toFixed(2),
@@ -240,6 +266,7 @@ const TimeReport = ({ range }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedBoards, setSelectedBoards] = useState([]); // empty = all
+  const [billing, setBilling] = useState('all'); // 'all' | 'unbilled' | 'invoiced'
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -256,7 +283,7 @@ const TimeReport = ({ range }) => {
   const hasRunning = entries.some(e => !e.endedAt);
   const now = useNow(hasRunning, 30000);
 
-  const allBoards = useMemo(() => buildReport(entries, now), [entries, now]);
+  const allBoards = useMemo(() => buildReport(entries, now, billing), [entries, now, billing]);
 
   // Stable color per board (by order of first appearance in the unfiltered report)
   const boardColors = useMemo(() => {
@@ -286,7 +313,7 @@ const TimeReport = ({ range }) => {
   };
 
   const exportCsv = () => {
-    downloadFile(`time-report_${range.start}_${range.end}.csv`, buildCsv(boards), 'text/csv;charset=utf-8');
+    downloadFile(`time-report_${billing === 'all' ? '' : billing + '_'}${range.start}_${range.end}.csv`, buildCsv(boards), 'text/csv;charset=utf-8');
   };
 
   const copySummary = async () => {
@@ -311,6 +338,29 @@ const TimeReport = ({ range }) => {
 
   return (
     <div>
+      {/* Billing status */}
+      <div className="flex gap-1 mb-3" role="group" aria-label="Billing status">
+        {[
+          { id: 'all', label: 'All' },
+          { id: 'unbilled', label: 'Unbilled' },
+          { id: 'invoiced', label: 'Invoiced' },
+        ].map(f => (
+          <button
+            key={f.id}
+            onClick={() => setBilling(f.id)}
+            aria-pressed={billing === f.id}
+            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+              billing === f.id ? 'bg-slate-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {allBoards.length === 0 ? (
+        <div className="text-slate-500 italic text-center py-16">No {billing} time in this date range</div>
+      ) : (<>
       {/* Board filter + exports */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         {allBoards.length > 1 && allBoards.map(b => {
@@ -419,6 +469,7 @@ const TimeReport = ({ range }) => {
         <span className="text-white font-medium">{formatMinutes(totals.billedMinutes)}</span>
         <span className="text-green-400 font-medium w-24 text-right">{formatUsd(totals.amount)}</span>
       </div>
+      </>)}
     </div>
   );
 };

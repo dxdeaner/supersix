@@ -388,6 +388,36 @@ const api = {
     });
   },
 
+  // Invoice endpoints
+  async getInvoices() {
+    return this.request('/invoices.php');
+  },
+
+  async previewInvoice(boardId, start, end) {
+    const tz = encodeURIComponent(userTimezone());
+    return this.request(`/invoices.php?action=preview&board_id=${boardId}&start=${start}&end=${end}&tz=${tz}`);
+  },
+
+  async createInvoice(boardId, start, end, issueDate) {
+    return this.request('/invoices.php?action=create', {
+      method: 'POST',
+      body: JSON.stringify({ board_id: boardId, start, end, issueDate, tz: userTimezone() }),
+    });
+  },
+
+  async setInvoiceStatus(id, status) {
+    return this.request('/invoices.php?action=status', {
+      method: 'POST',
+      body: JSON.stringify({ id, status }),
+    });
+  },
+
+  async deleteInvoice(id) {
+    return this.request(`/invoices.php?id=${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   async setTaskRate(taskId, rate) {
     return this.request('/time.php?action=task_rate', {
       method: 'POST',

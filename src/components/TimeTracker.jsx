@@ -104,7 +104,9 @@ const TimeTracker = ({ task, runningEntry, onStart, onStop, onChanged }) => {
 
   const summary = summarizeTaskTime(entries, now);
   const rate = effectiveRate(taskRate, boardRate);
-  const amount = billedAmount(summary.billedMinutes, rate);
+  const hasInvoiced = summary.invoicedMinutes > 0;
+  // Invoiced time was priced at invoice time; the live amount covers unbilled time only
+  const amount = billedAmount(hasInvoiced ? summary.unbilledMinutes : summary.billedMinutes, rate);
 
   const afterMutation = async () => {
     await load();
@@ -195,9 +197,18 @@ const TimeTracker = ({ task, runningEntry, onStart, onStop, onChanged }) => {
           <div>
             <span className="text-white text-sm font-medium">{formatMinutes(summary.billedMinutes)}</span>
             <span className="text-slate-500 text-xs ml-1.5">billed · {formatRawMs(summary.rawMs)} raw</span>
+            {hasInvoiced && (
+              <div className="text-xs text-slate-500 mt-0.5">
+                <span className="text-slate-300">{formatMinutes(summary.unbilledMinutes)}</span> unbilled ·{' '}
+                <Icon name="lock" size={10} className="inline -mt-0.5" /> {formatMinutes(summary.invoicedMinutes)} invoiced
+              </div>
+            )}
           </div>
           {amount != null && (
-            <span className="text-green-400 text-sm font-medium">{formatUsd(amount)}</span>
+            <span className="text-green-400 text-sm font-medium text-right">
+              {formatUsd(amount)}
+              {hasInvoiced && <span className="block text-[10px] font-normal text-slate-500">unbilled</span>}
+            </span>
           )}
         </div>
         <div className="flex items-center gap-1.5 text-xs text-slate-400">
@@ -255,20 +266,28 @@ const TimeTracker = ({ task, runningEntry, onStart, onStop, onChanged }) => {
                       </span>
                       <span className="text-slate-500 whitespace-nowrap">{formatRawMs(entryMs(entry, now))}</span>
                       <span className="flex-1 truncate text-slate-400" title={entry.note || ''}>{entry.note}</span>
-                      <button
-                        onClick={() => startEdit(entry)}
-                        className="text-slate-500 hover:text-cyan-400 transition-colors"
-                        aria-label="Edit time entry"
-                      >
-                        <Icon name="edit-3" size={12} />
-                      </button>
-                      <button
-                        onClick={() => removeEntry(entry.id)}
-                        className="text-slate-500 hover:text-red-400 transition-colors"
-                        aria-label="Delete time entry"
-                      >
-                        <Icon name="trash-2" size={12} />
-                      </button>
+                      {entry.invoiceId ? (
+                        <span className="text-slate-500" title="Invoiced — locked">
+                          <Icon name="lock" size={12} />
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => startEdit(entry)}
+                            className="text-slate-500 hover:text-cyan-400 transition-colors"
+                            aria-label="Edit time entry"
+                          >
+                            <Icon name="edit-3" size={12} />
+                          </button>
+                          <button
+                            onClick={() => removeEntry(entry.id)}
+                            className="text-slate-500 hover:text-red-400 transition-colors"
+                            aria-label="Delete time entry"
+                          >
+                            <Icon name="trash-2" size={12} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   )
                 ))}

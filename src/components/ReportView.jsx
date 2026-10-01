@@ -6,6 +6,7 @@ import {
 import Icon from './Icon';
 import ReportSummaryModal from './ReportSummaryModal';
 import TimeReport from './TimeReport';
+import InvoicesTab from './InvoicesTab';
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
 
@@ -172,7 +173,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
   const [showCustom, setShowCustom] = useState(false);
   const [range, setRange] = useState(() => getPresetRange('this-week'));
   const [showSummary, setShowSummary] = useState(false);
-  const [tab, setTab] = useState('activity'); // 'activity' | 'time'
+  const [tab, setTab] = useState('activity'); // 'activity' | 'time' | 'invoices'
 
   // Load on mount and whenever range changes
   useEffect(() => {
@@ -317,6 +318,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
         {[
           { id: 'activity', label: 'Activity', icon: 'bar-chart-2' },
           { id: 'time', label: 'Time', icon: 'clock' },
+          { id: 'invoices', label: 'Invoices', icon: 'file-text' },
         ].map(t => (
           <button
             key={t.id}
@@ -334,6 +336,8 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
       </div>
 
       {tab === 'time' && range.start && range.end && <TimeReport range={range} />}
+
+      {tab === 'invoices' && range.start && range.end && <InvoicesTab range={range} />}
 
       {tab === 'activity' && reportLoading && (
         <div className="text-slate-400 text-center py-16">Loading report…</div>

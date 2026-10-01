@@ -24,28 +24,41 @@ export const roundUpToIncrement = (ms) =>
   ms <= 0 ? 0 : Math.ceil(ms / MS_PER_MIN / BILLING_INCREMENT_MIN) * BILLING_INCREMENT_MIN;
 
 // Summarize one task's entries: per-day raw + billed minutes, newest day first.
+// Each day also splits billed time into invoiced (billed on the invoiced entries alone)
+// and unbilled (what the remaining entries add on top), matching the server's rule.
 export const summarizeTaskTime = (entries, now = Date.now()) => {
   const byDay = new Map();
   entries.forEach(entry => {
     const key = localDateKey(entry.startedAt);
-    if (!byDay.has(key)) byDay.set(key, { date: key, rawMs: 0, entries: [] });
+    if (!byDay.has(key)) byDay.set(key, { date: key, rawMs: 0, invoicedMs: 0, entries: [] });
     const day = byDay.get(key);
-    day.rawMs += entryMs(entry, now);
+    const ms = entryMs(entry, now);
+    day.rawMs += ms;
+    if (entry.invoiceId) day.invoicedMs += ms;
     day.entries.push(entry);
   });
 
   const days = [...byDay.values()]
-    .map(day => ({
-      ...day,
-      billedMinutes: roundUpToIncrement(day.rawMs),
-      entries: day.entries.sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt)),
-    }))
+    .map(day => {
+      const billedMinutes = roundUpToIncrement(day.rawMs);
+      const invoicedMinutes = roundUpToIncrement(day.invoicedMs);
+      return {
+        ...day,
+        billedMinutes,
+        invoicedMinutes,
+        unbilledMinutes: billedMinutes - invoicedMinutes,
+        entries: day.entries.sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt)),
+      };
+    })
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 
+  const sum = (key) => days.reduce((total, d) => total + d[key], 0);
   return {
     days,
-    rawMs: days.reduce((sum, d) => sum + d.rawMs, 0),
-    billedMinutes: days.reduce((sum, d) => sum + d.billedMinutes, 0),
+    rawMs: sum('rawMs'),
+    billedMinutes: sum('billedMinutes'),
+    invoicedMinutes: sum('invoicedMinutes'),
+    unbilledMinutes: sum('unbilledMinutes'),
   };
 };
 

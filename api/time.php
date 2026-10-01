@@ -78,6 +78,7 @@ function formatEntry($row) {
         'startedAt' => toIsoUtc($row['started_at']),
         'endedAt'   => toIsoUtc($row['ended_at']),
         'note'      => $row['note'] ?? null,
+        'invoiceId' => isset($row['invoice_id']) ? (int)$row['invoice_id'] : null,
     ];
 }
 
@@ -359,10 +360,12 @@ function getTimeReport($pdo, $userId) {
     try {
         $stmt = $pdo->prepare("
             SELECT te.*, t.title AS task_title, t.status AS task_status, t.hourly_rate AS task_rate,
-                   b.id AS board_id, b.name AS board_name, b.hourly_rate AS board_rate
+                   b.id AS board_id, b.name AS board_name, b.hourly_rate AS board_rate,
+                   il.rate AS invoiced_rate
             FROM time_entries te
             JOIN tasks t ON te.task_id = t.id
             JOIN boards b ON t.board_id = b.id
+            LEFT JOIN invoice_lines il ON il.invoice_id = te.invoice_id AND il.task_id = te.task_id
             WHERE te.user_id = ? AND b.user_id = ?
               AND te.started_at >= ? AND te.started_at < ?
             ORDER BY te.started_at ASC
@@ -377,6 +380,7 @@ function getTimeReport($pdo, $userId) {
                 'boardId'    => (int)$row['board_id'],
                 'boardName'  => $row['board_name'],
                 'boardRate'  => rateOrNull($row['board_rate']),
+                'invoicedRate' => rateOrNull($row['invoiced_rate']),
             ];
         }, $stmt->fetchAll());
 
@@ -487,6 +491,9 @@ function updateEntry($pdo, $userId) {
 
     try {
         $existing = requireOwnedEntry($pdo, $userId, $entryId);
+        if (!empty($existing['invoice_id'])) {
+            sendResponse(['error' => 'This entry is invoiced and locked'], 409);
+        }
 
         $start = parseUtc($data['startedAt'] ?? null, 'startedAt');
         // A running entry may keep a null end (edit its start only)
@@ -514,7 +521,10 @@ function deleteEntry($pdo, $userId) {
     }
 
     try {
-        requireOwnedEntry($pdo, $userId, $entryId);
+        $existing = requireOwnedEntry($pdo, $userId, $entryId);
+        if (!empty($existing['invoice_id'])) {
+            sendResponse(['error' => 'This entry is invoiced and locked'], 409);
+        }
         $pdo->prepare("DELETE FROM time_entries WHERE id = ? AND user_id = ?")
             ->execute([$entryId, $userId]);
         sendResponse(['message' => 'Time entry deleted']);
