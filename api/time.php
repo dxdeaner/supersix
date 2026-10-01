@@ -30,6 +30,8 @@ switch ($method) {
         $action = $_GET['action'] ?? '';
         if ($action === 'running') {
             getRunningEntry($pdo, $userId);
+        } elseif ($action === 'report') {
+            getTimeReport($pdo, $userId);
         } elseif (isset($_GET['task_id'])) {
             getTaskEntries($pdo, $userId, (int)$_GET['task_id']);
         } elseif (isset($_GET['board_id'])) {
@@ -327,6 +329,64 @@ function getTaskEntries($pdo, $userId, $taskId) {
     } catch (PDOException $e) {
         error_log("Get task entries error: " . $e->getMessage());
         sendResponse(['error' => 'Failed to fetch time entries'], 500);
+    }
+}
+
+/**
+ * All entries that started within [start, end] (inclusive local dates, ?tz= IANA name),
+ * with task/board info and rates. Billing math is done client-side.
+ */
+function getTimeReport($pdo, $userId) {
+    $start = $_GET['start'] ?? '';
+    $end   = $_GET['end']   ?? '';
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $start) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end)) {
+        sendResponse(['error' => 'Invalid date format. Use YYYY-MM-DD'], 400);
+    }
+    if ($start > $end) {
+        sendResponse(['error' => 'start must be on or before end'], 400);
+    }
+
+    $tz = requestTimezone(['tz' => $_GET['tz'] ?? '']);
+    $utc = new DateTimeZone('UTC');
+    $rangeStart = new DateTime($start . ' 00:00:00', $tz);
+    $rangeEnd = (new DateTime($end . ' 00:00:00', $tz))->modify('+1 day');
+    if ($rangeStart->diff($rangeEnd)->days > 367) {
+        sendResponse(['error' => 'Date range cannot exceed 366 days'], 400);
+    }
+    $rangeStart->setTimezone($utc);
+    $rangeEnd->setTimezone($utc);
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT te.*, t.title AS task_title, t.status AS task_status, t.hourly_rate AS task_rate,
+                   b.id AS board_id, b.name AS board_name, b.hourly_rate AS board_rate
+            FROM time_entries te
+            JOIN tasks t ON te.task_id = t.id
+            JOIN boards b ON t.board_id = b.id
+            WHERE te.user_id = ? AND b.user_id = ?
+              AND te.started_at >= ? AND te.started_at < ?
+            ORDER BY te.started_at ASC
+        ");
+        $stmt->execute([$userId, $userId, $rangeStart->format('Y-m-d H:i:s'), $rangeEnd->format('Y-m-d H:i:s')]);
+
+        $entries = array_map(function ($row) {
+            return formatEntry($row) + [
+                'taskTitle'  => $row['task_title'],
+                'taskStatus' => $row['task_status'],
+                'taskRate'   => rateOrNull($row['task_rate']),
+                'boardId'    => (int)$row['board_id'],
+                'boardName'  => $row['board_name'],
+                'boardRate'  => rateOrNull($row['board_rate']),
+            ];
+        }, $stmt->fetchAll());
+
+        sendResponse([
+            'range'   => ['start' => $start, 'end' => $end],
+            'entries' => $entries,
+        ]);
+    } catch (PDOException $e) {
+        error_log("Time report error: " . $e->getMessage());
+        sendResponse(['error' => 'Failed to generate time report'], 500);
     }
 }
 

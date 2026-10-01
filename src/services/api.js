@@ -320,7 +320,13 @@ const api = {
 
   // Report endpoint
   async getReport(start, end) {
-    return this.request(`/report.php?start=${start}&end=${end}`);
+    const tz = encodeURIComponent(userTimezone());
+    return this.request(`/report.php?start=${start}&end=${end}&tz=${tz}`);
+  },
+
+  async getTimeReport(start, end) {
+    const tz = encodeURIComponent(userTimezone());
+    return this.request(`/time.php?action=report&start=${start}&end=${end}&tz=${tz}`);
   },
 
   async getDueSummary() {

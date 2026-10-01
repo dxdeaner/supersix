@@ -33,8 +33,15 @@ if ($diff > 366) {
     sendResponse(['error' => 'Date range cannot exceed 366 days'], 400);
 }
 
-$rangeStart = $start . ' 00:00:00';
-$rangeEnd   = date('Y-m-d', strtotime($end . ' +1 day')) . ' 00:00:00';
+// Day boundaries follow the user's local timezone (sent as ?tz=, IANA name), converted to UTC
+try {
+    $userTz = new DateTimeZone($_GET['tz'] ?? 'UTC');
+} catch (Exception $e) {
+    $userTz = new DateTimeZone('UTC');
+}
+$utcTz = new DateTimeZone('UTC');
+$rangeStart = (new DateTime($start . ' 00:00:00', $userTz))->setTimezone($utcTz)->format('Y-m-d H:i:s');
+$rangeEnd   = (new DateTime($end . ' 00:00:00', $userTz))->modify('+1 day')->setTimezone($utcTz)->format('Y-m-d H:i:s');
 
 $database = new Database();
 $pdo = $database->connect();

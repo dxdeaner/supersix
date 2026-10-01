@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import Icon from './Icon';
 import ReportSummaryModal from './ReportSummaryModal';
+import TimeReport from './TimeReport';
 
 // ─── Date helpers ────────────────────────────────────────────────────────────
 
@@ -171,6 +172,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
   const [showCustom, setShowCustom] = useState(false);
   const [range, setRange] = useState(() => getPresetRange('this-week'));
   const [showSummary, setShowSummary] = useState(false);
+  const [tab, setTab] = useState('activity'); // 'activity' | 'time'
 
   // Load on mount and whenever range changes
   useEffect(() => {
@@ -251,7 +253,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
             {formatShortDate(range.start)} – {formatShortDate(range.end)}
           </span>
         )}
-        {reportData && (
+        {reportData && tab === 'activity' && (
           <button
             onClick={() => setShowSummary(true)}
             className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-sm rounded-lg transition-colors"
@@ -310,11 +312,34 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
         </div>
       )}
 
-      {reportLoading && (
+      {/* Activity | Time */}
+      <div className="flex gap-1 mb-6 border-b border-slate-700" role="tablist">
+        {[
+          { id: 'activity', label: 'Activity', icon: 'bar-chart-2' },
+          { id: 'time', label: 'Time', icon: 'clock' },
+        ].map(t => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex items-center gap-1.5 px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors ${
+              tab === t.id ? 'border-cyan-400 text-white' : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Icon name={t.icon} size={14} />
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'time' && range.start && range.end && <TimeReport range={range} />}
+
+      {tab === 'activity' && reportLoading && (
         <div className="text-slate-400 text-center py-16">Loading report…</div>
       )}
 
-      {!reportLoading && reportData && (
+      {tab === 'activity' && !reportLoading && reportData && (
         <>
           {/* Stat Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
