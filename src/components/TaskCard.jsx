@@ -253,6 +253,13 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
               <Icon name="check" size={14} />
               <span>Complete</span>
             </button>
+            <button
+              onClick={() => onView(task.id)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center space-x-1"
+            >
+              <Icon name="eye" size={14} />
+              <span>View</span>
+            </button>
             {task.dueDate && (
               <button
                 onClick={() => onPostpone(task.id)}
@@ -262,13 +269,6 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
                 <span>Postpone</span>
               </button>
             )}
-            <button
-              onClick={() => onView(task.id)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center space-x-1"
-            >
-              <Icon name="eye" size={14} />
-              <span>View</span>
-            </button>
             <button
               onClick={() => onDemote(task.id)}
               className="border border-slate-500 text-slate-500 hover:border-slate-400 hover:text-slate-400 bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
@@ -314,7 +314,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
 
             <button
               onClick={() => onToggleBlock(task.id)}
-              className={`border bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1 ${task.isBlocked ? 'border-red-500 text-red-400 hover:border-red-400 hover:text-red-300' : 'border-slate-500 text-slate-500 hover:border-slate-400 hover:text-slate-400'}`}
+              className={`border px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1 ${task.isBlocked ? 'border-red-500 bg-red-500/20 text-red-300 hover:bg-red-500/30' : 'border-red-500/70 text-red-400 hover:border-red-400 hover:text-red-300'}`}
               title={task.isBlocked ? 'Unblock task' : 'Block task'}
             >
               <Icon name={task.isBlocked ? 'unlock' : 'lock'} size={12} />
