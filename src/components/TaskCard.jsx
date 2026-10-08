@@ -267,27 +267,6 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
               <Icon name="eye" size={14} />
               <span>View</span>
             </button>
-            {onStartTimer && (
-              isTimerRunning ? (
-                <button
-                  onClick={onStopTimer}
-                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center space-x-1.5"
-                  title="Stop timer"
-                >
-                  <Icon name="square" size={12} />
-                  <span className="font-mono tabular-nums">{formatClock(entryMs(runningEntry, now))}</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => onStartTimer(task.id)}
-                  className="border border-green-600 text-green-500 hover:bg-green-600 hover:text-white bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
-                  title="Start timer"
-                >
-                  <Icon name="play" size={12} />
-                  <span>Track</span>
-                </button>
-              )
-            )}
             <button
               onClick={() => onDemote(task.id)}
               className="border border-slate-500 text-slate-500 hover:border-slate-400 hover:text-slate-400 bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
@@ -340,6 +319,28 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
               <span>{task.isBlocked ? 'Unblock' : 'Block'}</span>
             </button>
 
+            {onStartTimer && (
+              isTimerRunning ? (
+                <button
+                  onClick={onStopTimer}
+                  className="bg-green-600/20 hover:bg-red-600 text-green-300 hover:text-white px-2 py-0.5 rounded-full text-xs font-medium transition-colors flex items-center space-x-1"
+                  title="Stop timer"
+                  aria-label="Stop timer"
+                >
+                  <Icon name="square" size={10} />
+                  <span className="font-mono tabular-nums">{formatClock(entryMs(runningEntry, now))}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => onStartTimer(task.id)}
+                  className="text-slate-300 hover:text-green-400 p-1 transition-colors hover:bg-green-400/10 rounded"
+                  title="Start timer"
+                  aria-label="Start timer"
+                >
+                  <Icon name="play-circle" size={16} />
+                </button>
+              )
+            )}
             <button
               onClick={() => onEdit(task.id)}
               className="text-slate-300 hover:text-cyan-400 p-1 transition-colors hover:bg-cyan-400/10 rounded"
