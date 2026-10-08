@@ -739,13 +739,23 @@ const App = () => {
     loadTasks();
   };
 
+  // Mirrors the server: push the due date out one day (or tomorrow 9 AM if none).
+  // Works on the raw "YYYY-MM-DD HH:MM:SS" string so the format matches what the API returns.
+  const postponedDueDate = (dueDate) => {
+    const pad = n => String(n).padStart(2, '0');
+    const match = dueDate && dueDate.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+    const d = match
+      ? new Date(Date.UTC(+match[1], +match[2] - 1, +match[3] + 1, +match[4], +match[5], +(match[6] || 0)))
+      : (() => { const t = new Date(); return new Date(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate() + 1, 9, 0, 0)); })();
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+  };
+
   const postponeTask = withOptimistic(
     (taskId) => api.postponeTask(taskId),
     (taskId) => {
-      const maxQueuePos = Math.max(0, ...tasks.filter(t => t.status === 'queued').map(t => t.position));
       setTasks(prev => prev.map(t =>
         t.id === taskId
-          ? { ...t, status: 'queued', position: maxQueuePos + 1 }
+          ? { ...t, dueDate: postponedDueDate(t.dueDate) }
           : t
       ));
     },

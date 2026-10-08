@@ -256,7 +256,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
             {task.dueDate && (
               <button
                 onClick={() => onPostpone(task.id)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center space-x-1"
+                className="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center space-x-1"
               >
                 <Icon name="clock" size={14} />
                 <span>Postpone</span>
@@ -264,7 +264,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
             )}
             <button
               onClick={() => onView(task.id)}
-              className="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center space-x-1"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center space-x-1"
             >
               <Icon name="eye" size={14} />
               <span>View</span>
