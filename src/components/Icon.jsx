@@ -36,7 +36,6 @@ const iconPaths = {
   'alert-circle': 'M12 22a10 10 0 100-20 10 10 0 000 20zM12 8v4M12 16h.01',
   'play': 'M6 4l14 8-14 8V4z',
   'square': 'M6 6h12v12H6z',
-  'play-circle': 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z M10 8.5l5.5 3.5-5.5 3.5v-7z',
 };
 
 const Icon = ({ name, size = 16, className = '', ...props }) => (

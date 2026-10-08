@@ -337,7 +337,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
                   title="Start timer"
                   aria-label="Start timer"
                 >
-                  <Icon name="play-circle" size={16} />
+                  <Icon name="clock" size={16} />
                 </button>
               )
             )}
