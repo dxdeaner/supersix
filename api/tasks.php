@@ -278,7 +278,7 @@ function getLookingAhead($pdo) {
             WHERE b.user_id = ?
               AND b.archived = 0
               AND t.status != 'completed'
-              AND t.due_date > NOW()
+              AND t.due_date >= CURDATE()
             ORDER BY t.due_date ASC
             LIMIT 15
         ");
