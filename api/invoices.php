@@ -3,11 +3,13 @@
 // An invoice snapshots a board's unbilled time for a period: one line per task with
 // billed minutes, the rate at creation, and amount. Linked time entries are locked.
 //
-// Billing rule (matches the client): each task's daily total rounds UP to 15 min.
-// Unbilled minutes for a task-day = billed(all finished time) - billed(already invoiced time),
-// so time added to an already-invoiced day bills only what it adds.
+// Billing rule (matches the client, see billing_helper.php): all of a board's finished time
+// for one local day at one rate is pooled and rounded UP once to 15 min, then the rounded
+// minutes are spread across the tasks in whole minutes. Time added to an already-invoiced
+// pool bills only what it adds to the pool's rounded total.
 require_once 'config.php';
 require_once __DIR__ . '/journal_helper.php';
+require_once __DIR__ . '/billing_helper.php';
 
 startSecureSession();
 
@@ -50,10 +52,6 @@ switch ($method) {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
-
-function invBilledMinutes($seconds) {
-    return $seconds <= 0 ? 0 : (int)ceil($seconds / 900) * 15;
-}
 
 function invFormatMinutes($minutes) {
     $h = intdiv($minutes, 60);
@@ -104,10 +102,12 @@ function computeUnbilled($pdo, $userId, $boardId, $start, $end, DateTimeZone $tz
     $stmt = $pdo->prepare("
         SELECT te.id, te.task_id, te.started_at, te.invoice_id,
                TIMESTAMPDIFF(SECOND, te.started_at, te.ended_at) AS seconds,
-               t.title, t.position, t.hourly_rate AS task_rate, b.hourly_rate AS board_rate
+               t.title, t.hourly_rate AS task_rate, b.hourly_rate AS board_rate,
+               il.rate AS invoiced_rate
         FROM time_entries te
         JOIN tasks t ON te.task_id = t.id
         JOIN boards b ON t.board_id = b.id
+        LEFT JOIN invoice_lines il ON il.invoice_id = te.invoice_id AND il.task_id = te.task_id
         WHERE te.user_id = ? AND b.id = ? AND b.user_id = ?
           AND te.ended_at IS NOT NULL
           AND te.started_at >= ? AND te.started_at < ?
@@ -115,54 +115,69 @@ function computeUnbilled($pdo, $userId, $boardId, $start, $end, DateTimeZone $tz
     ");
     $stmt->execute([$userId, $boardId, $userId, $from, $to]);
 
-    $tasks = [];
+    // Pool by local day + rate. Each pool tracks all / invoiced seconds and per-task unbilled seconds.
+    $pools = [];
+    $taskInfo = [];
+    $entryIds = [];
     foreach ($stmt->fetchAll() as $row) {
         $taskId = (int)$row['task_id'];
-        if (!isset($tasks[$taskId])) {
-            $rate = $row['task_rate'] !== null ? (float)$row['task_rate']
-                  : ($row['board_rate'] !== null ? (float)$row['board_rate'] : null);
-            $tasks[$taskId] = ['title' => $row['title'], 'rate' => $rate, 'days' => [], 'entryIds' => []];
-        }
+        $isInvoiced = $row['invoice_id'] !== null;
         $day = (new DateTime($row['started_at'], $utc))->setTimezone($tz)->format('Y-m-d');
-        if (!isset($tasks[$taskId]['days'][$day])) {
-            $tasks[$taskId]['days'][$day] = ['all' => 0, 'invoiced' => 0];
+        $rateKey = billingRateKey($row['task_rate'], $row['board_rate'], $row['invoiced_rate'], $isInvoiced);
+        $poolKey = $day . '|' . $rateKey;
+
+        if (!isset($pools[$poolKey])) {
+            $pools[$poolKey] = ['all' => 0, 'invoiced' => 0, 'tasks' => []];
         }
         $seconds = (int)$row['seconds'];
-        $tasks[$taskId]['days'][$day]['all'] += $seconds;
-        if ($row['invoice_id'] !== null) {
-            $tasks[$taskId]['days'][$day]['invoiced'] += $seconds;
+        $pools[$poolKey]['all'] += $seconds;
+        if ($isInvoiced) {
+            $pools[$poolKey]['invoiced'] += $seconds;
         } else {
-            $tasks[$taskId]['entryIds'][] = (int)$row['id'];
+            $pools[$poolKey]['tasks'][$taskId] = ($pools[$poolKey]['tasks'][$taskId] ?? 0) + $seconds;
+            $entryIds[] = (int)$row['id'];
+            if (!isset($taskInfo[$taskId])) {
+                $rate = $row['task_rate'] !== null ? (float)$row['task_rate']
+                      : ($row['board_rate'] !== null ? (float)$row['board_rate'] : null);
+                $taskInfo[$taskId] = ['title' => $row['title'], 'rate' => $rate];
+            }
+        }
+    }
+
+    // Billable minutes each pool adds beyond what's already invoiced, spread across its tasks
+    $taskMinutes = [];
+    foreach ($pools as $pool) {
+        if (!$pool['tasks']) continue;
+        $added = billedMinutesForSeconds($pool['all']) - billedMinutesForSeconds($pool['invoiced']);
+        if ($added <= 0) continue;
+
+        ksort($pool['tasks']); // task id order — identical tie-breaking on client and server
+        $ids = array_keys($pool['tasks']);
+        $alloc = allocateMinutes($added, array_values($pool['tasks']));
+        foreach ($ids as $i => $taskId) {
+            $taskMinutes[$taskId] = ($taskMinutes[$taskId] ?? 0) + $alloc[$i];
         }
     }
 
     $lines = [];
-    $entryIds = [];
     $totalMinutes = 0;
     $total = 0.0;
-    foreach ($tasks as $taskId => $task) {
-        if (!$task['entryIds']) continue; // nothing unbilled on this task
-        $entryIds = array_merge($entryIds, $task['entryIds']);
-
-        $minutes = 0;
-        foreach ($task['days'] as $d) {
-            $minutes += invBilledMinutes($d['all']) - invBilledMinutes($d['invoiced']);
-        }
-        if ($minutes <= 0) continue; // covered by already-invoiced rounding — lock entries, no line
-
-        $amount = $task['rate'] === null ? 0.0 : round($minutes / 60 * $task['rate'], 2);
+    foreach ($taskMinutes as $taskId => $minutes) {
+        if ($minutes <= 0) continue; // entries still lock, but there is nothing to bill for this task
+        $rate = $taskInfo[$taskId]['rate'];
+        $amount = $rate === null ? 0.0 : round($minutes / 60 * $rate, 2);
         $lines[] = [
             'taskId'      => $taskId,
-            'description' => $task['title'],
+            'description' => $taskInfo[$taskId]['title'],
             'minutes'     => $minutes,
-            'rate'        => $task['rate'],
+            'rate'        => $rate,
             'amount'      => $amount,
         ];
         $totalMinutes += $minutes;
         $total += $amount;
     }
 
-    usort($lines, fn($a, $b) => $b['minutes'] <=> $a['minutes']);
+    usort($lines, fn($a, $b) => ($b['minutes'] <=> $a['minutes']) ?: ($a['taskId'] <=> $b['taskId']));
 
     return ['lines' => $lines, 'entryIds' => $entryIds, 'minutes' => $totalMinutes, 'total' => round($total, 2)];
 }

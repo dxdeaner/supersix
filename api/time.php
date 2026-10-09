@@ -4,6 +4,7 @@
 // is computed client-side so "day" follows the user's local timezone.
 require_once 'config.php';
 require_once __DIR__ . '/journal_helper.php';
+require_once __DIR__ . '/billing_helper.php';
 
 // Start secure session
 startSecureSession();
@@ -212,9 +213,42 @@ function formatLoggedMinutes($minutes) {
     return $m === 0 ? $h . 'h' : $h . 'h ' . $m . 'm';
 }
 
-/** Seconds → billed minutes (rounded up to 15-min increments, same rule as the client). */
-function billedMinutes($seconds) {
-    return $seconds <= 0 ? 0 : (int)ceil($seconds / 900) * 15;
+/** Whole seconds between a finished entry's start and end (UTC datetimes). */
+function entrySeconds($row) {
+    $utc = new DateTimeZone('UTC');
+    $start = (new DateTime($row['started_at'], $utc))->getTimestamp();
+    $end = (new DateTime($row['ended_at'], $utc))->getTimestamp();
+    return max(0, $end - $start);
+}
+
+/** An entry plus its task/board info and rates (what the client needs to pool billing). */
+function formatEntryWithRates($row) {
+    return formatEntry($row) + [
+        'taskTitle'    => $row['task_title'],
+        'taskStatus'   => $row['task_status'],
+        'taskRate'     => rateOrNull($row['task_rate']),
+        'boardId'      => (int)$row['board_id'],
+        'boardName'    => $row['board_name'],
+        'boardRate'    => rateOrNull($row['board_rate']),
+        'invoicedRate' => rateOrNull($row['invoiced_rate']),
+    ];
+}
+
+/** Entries for a user with task/board info and rates; $where/$params add extra conditions. */
+function fetchEntriesWithRates($pdo, $userId, $where, array $params) {
+    $stmt = $pdo->prepare("
+        SELECT te.*, t.title AS task_title, t.status AS task_status, t.hourly_rate AS task_rate,
+               b.id AS board_id, b.name AS board_name, b.hourly_rate AS board_rate,
+               il.rate AS invoiced_rate
+        FROM time_entries te
+        JOIN tasks t ON te.task_id = t.id
+        JOIN boards b ON t.board_id = b.id
+        LEFT JOIN invoice_lines il ON il.invoice_id = te.invoice_id AND il.task_id = te.task_id
+        WHERE te.user_id = ? AND b.user_id = ? AND $where
+        ORDER BY te.started_at ASC
+    ");
+    $stmt->execute(array_merge([$userId, $userId], $params));
+    return $stmt->fetchAll();
 }
 
 /** Timezone sent by the client ('tz'), falling back to UTC. */
@@ -228,25 +262,17 @@ function requestTimezone($data) {
 }
 
 /**
- * Write a "time_logged" journal auto-entry for a finished time entry, noting its
- * billed duration: how much it adds to the task's billed total for that local day
- * (daily totals round up to 15 min). Skips entries under a minute.
+ * Write a "time_logged" journal auto-entry for a finished time entry, noting its billed
+ * duration: how much it adds to the board's rounded total for that local day and rate
+ * (rounding is pooled per board, day and rate). Skips entries under a minute.
  */
 function logTimeToJournal($pdo, $userId, $entryId, DateTimeZone $tz, $manual = false) {
     try {
-        $stmt = $pdo->prepare("
-            SELECT te.note, te.started_at, TIMESTAMPDIFF(SECOND, te.started_at, te.ended_at) AS seconds,
-                   t.id AS task_id, t.title AS task_title, b.id AS board_id, b.name AS board_name
-            FROM time_entries te
-            JOIN tasks t ON te.task_id = t.id
-            JOIN boards b ON t.board_id = b.id
-            WHERE te.id = ? AND te.user_id = ? AND te.ended_at IS NOT NULL
-        ");
-        $stmt->execute([$entryId, $userId]);
-        $row = $stmt->fetch();
-        if (!$row) return;
+        $rows = fetchEntriesWithRates($pdo, $userId, 'te.id = ? AND te.ended_at IS NOT NULL', [$entryId]);
+        if (!$rows) return;
+        $row = $rows[0];
 
-        $seconds = (int)$row['seconds'];
+        $seconds = entrySeconds($row);
         if ($seconds < 60) return;
 
         // Local-day bounds (in UTC) for the day this entry started
@@ -256,22 +282,23 @@ function logTimeToJournal($pdo, $userId, $entryId, DateTimeZone $tz, $manual = f
         $dayStart->setTimezone($utc);
         $dayEnd->setTimezone($utc);
 
-        // Task's finished time that day, excluding this entry
-        $sumStmt = $pdo->prepare("
-            SELECT COALESCE(SUM(TIMESTAMPDIFF(SECOND, started_at, ended_at)), 0)
-            FROM time_entries
-            WHERE user_id = ? AND task_id = ? AND id != ? AND ended_at IS NOT NULL
-              AND started_at >= ? AND started_at < ?
-        ");
-        $sumStmt->execute([$userId, $row['task_id'], $entryId,
-            $dayStart->format('Y-m-d H:i:s'), $dayEnd->format('Y-m-d H:i:s')]);
-        $otherSeconds = (int)$sumStmt->fetchColumn();
+        $rateKey = billingRateKey($row['task_rate'], $row['board_rate'], $row['invoiced_rate'], $row['invoice_id'] !== null);
 
-        $billedAdded = billedMinutes($otherSeconds + $seconds) - billedMinutes($otherSeconds);
+        // Other finished time on the same board, local day and rate
+        $others = fetchEntriesWithRates($pdo, $userId,
+            'b.id = ? AND te.id != ? AND te.ended_at IS NOT NULL AND te.started_at >= ? AND te.started_at < ?',
+            [$row['board_id'], $entryId, $dayStart->format('Y-m-d H:i:s'), $dayEnd->format('Y-m-d H:i:s')]);
+        $otherSeconds = 0;
+        foreach ($others as $o) {
+            if (billingRateKey($o['task_rate'], $o['board_rate'], $o['invoiced_rate'], $o['invoice_id'] !== null) !== $rateKey) continue;
+            $otherSeconds += entrySeconds($o);
+        }
+
+        $billedAdded = billedMinutesForSeconds($otherSeconds + $seconds) - billedMinutesForSeconds($otherSeconds);
 
         $content = 'Logged ' . formatLoggedMinutes($billedAdded) . ' billed on "' . $row['task_title'] . '"';
         if ($billedAdded === 0) {
-            $content .= " (within the day's current 15-min block)";
+            $content .= " (within the board's current 15-min block for the day)";
         }
         if ($manual) {
             $content .= ' (manual entry)';
@@ -283,7 +310,7 @@ function logTimeToJournal($pdo, $userId, $entryId, DateTimeZone $tz, $manual = f
         insertJournalAutoLog($pdo, $userId, 'time_logged', $content,
             (int)$row['board_id'], $row['board_name'], (int)$row['task_id'], $row['task_title'],
             null, 2);
-    } catch (PDOException $e) {
+    } catch (Exception $e) {
         error_log("Time journal log error: " . $e->getMessage());
     }
 }
@@ -322,10 +349,12 @@ function getTaskEntries($pdo, $userId, $taskId) {
             ORDER BY started_at DESC
         ");
         $stmt->execute([$taskId, $userId]);
+        $boardEntries = fetchEntriesWithRates($pdo, $userId, 't.board_id = ?', [$task['board_id']]);
         sendResponse([
-            'entries'   => array_map('formatEntry', $stmt->fetchAll()),
-            'taskRate'  => rateOrNull($task['hourly_rate']),
-            'boardRate' => rateOrNull($task['board_rate']),
+            'entries'      => array_map('formatEntry', $stmt->fetchAll()),
+            'boardEntries' => array_map('formatEntryWithRates', $boardEntries),
+            'taskRate'     => rateOrNull($task['hourly_rate']),
+            'boardRate'    => rateOrNull($task['board_rate']),
         ]);
     } catch (PDOException $e) {
         error_log("Get task entries error: " . $e->getMessage());
@@ -358,31 +387,9 @@ function getTimeReport($pdo, $userId) {
     $rangeEnd->setTimezone($utc);
 
     try {
-        $stmt = $pdo->prepare("
-            SELECT te.*, t.title AS task_title, t.status AS task_status, t.hourly_rate AS task_rate,
-                   b.id AS board_id, b.name AS board_name, b.hourly_rate AS board_rate,
-                   il.rate AS invoiced_rate
-            FROM time_entries te
-            JOIN tasks t ON te.task_id = t.id
-            JOIN boards b ON t.board_id = b.id
-            LEFT JOIN invoice_lines il ON il.invoice_id = te.invoice_id AND il.task_id = te.task_id
-            WHERE te.user_id = ? AND b.user_id = ?
-              AND te.started_at >= ? AND te.started_at < ?
-            ORDER BY te.started_at ASC
-        ");
-        $stmt->execute([$userId, $userId, $rangeStart->format('Y-m-d H:i:s'), $rangeEnd->format('Y-m-d H:i:s')]);
-
-        $entries = array_map(function ($row) {
-            return formatEntry($row) + [
-                'taskTitle'  => $row['task_title'],
-                'taskStatus' => $row['task_status'],
-                'taskRate'   => rateOrNull($row['task_rate']),
-                'boardId'    => (int)$row['board_id'],
-                'boardName'  => $row['board_name'],
-                'boardRate'  => rateOrNull($row['board_rate']),
-                'invoicedRate' => rateOrNull($row['invoiced_rate']),
-            ];
-        }, $stmt->fetchAll());
+        $rows = fetchEntriesWithRates($pdo, $userId, 'te.started_at >= ? AND te.started_at < ?',
+            [$rangeStart->format('Y-m-d H:i:s'), $rangeEnd->format('Y-m-d H:i:s')]);
+        $entries = array_map('formatEntryWithRates', $rows);
 
         sendResponse([
             'range'   => ['start' => $start, 'end' => $end],
@@ -401,14 +408,8 @@ function getBoardEntries($pdo, $userId, $boardId) {
         if (!$stmt->fetch()) {
             sendResponse(['error' => 'Board not found or access denied'], 404);
         }
-        $stmt = $pdo->prepare("
-            SELECT te.* FROM time_entries te
-            JOIN tasks t ON te.task_id = t.id
-            WHERE t.board_id = ? AND te.user_id = ?
-            ORDER BY te.started_at ASC
-        ");
-        $stmt->execute([$boardId, $userId]);
-        sendResponse(array_map('formatEntry', $stmt->fetchAll()));
+        $rows = fetchEntriesWithRates($pdo, $userId, 't.board_id = ?', [$boardId]);
+        sendResponse(array_map('formatEntryWithRates', $rows));
     } catch (PDOException $e) {
         error_log("Get board entries error: " . $e->getMessage());
         sendResponse(['error' => 'Failed to fetch time entries'], 500);

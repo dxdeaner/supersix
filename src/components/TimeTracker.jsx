@@ -3,7 +3,7 @@ import Icon from './Icon';
 import api from '../services/api';
 import useNow from '../hooks/useNow';
 import {
-  summarizeTaskTime, effectiveRate, billedAmount, entryMs,
+  allocateBoardBilling, emptyTaskBilling, effectiveRate, billedAmount, entryMs,
   formatClock, formatMinutes, formatRawMs, formatUsd,
   toLocalInput, fromLocalInput, formatDayLabel, formatTimeOfDay,
 } from '../utils/timeTracking';
@@ -72,6 +72,7 @@ const EntryEditor = ({ draft, setDraft, isRunning, onSave, onCancel, saving }) =
 
 const TimeTracker = ({ task, runningEntry, onStart, onStop, onChanged }) => {
   const [entries, setEntries] = useState([]);
+  const [boardEntries, setBoardEntries] = useState([]);
   const [taskRate, setTaskRate] = useState(null);
   const [boardRate, setBoardRate] = useState(null);
   const [rateDraft, setRateDraft] = useState('');
@@ -88,6 +89,7 @@ const TimeTracker = ({ task, runningEntry, onStart, onStop, onChanged }) => {
     try {
       const data = await api.getTaskTime(task.id);
       setEntries(data.entries);
+      setBoardEntries(data.boardEntries);
       setTaskRate(data.taskRate);
       setBoardRate(data.boardRate);
       setRateDraft(data.taskRate != null ? String(data.taskRate) : '');
@@ -102,7 +104,8 @@ const TimeTracker = ({ task, runningEntry, onStart, onStop, onChanged }) => {
   // Reload whenever the running timer changes (started/stopped here or elsewhere)
   useEffect(() => { load(); }, [load, runningEntry?.id]);
 
-  const summary = summarizeTaskTime(entries, now);
+  // Rounding is pooled per board, so this task's billed share depends on the board's other entries
+  const summary = allocateBoardBilling(boardEntries, now).get(task.id) || emptyTaskBilling();
   const rate = effectiveRate(taskRate, boardRate);
   const hasInvoiced = summary.invoicedMinutes > 0;
   // Invoiced time was priced at invoice time; the live amount covers unbilled time only

@@ -4,7 +4,7 @@ import Icon from './Icon';
 import api from '../services/api';
 import useNow from '../hooks/useNow';
 import {
-  summarizeTaskTime, effectiveRate, billedAmount, entryMs,
+  allocateBoardBilling, effectiveRate, billedAmount, entryMs,
   formatMinutes, formatRawMs, formatUsd, formatDayLabel, formatTimeOfDay,
 } from '../utils/timeTracking';
 
@@ -62,8 +62,11 @@ function buildReport(entries, now, filter = 'all') {
     taskMap.get(e.taskId).entries.push(e);
   });
 
+  // Rounding is pooled per board, day and rate, so allocate across all entries at once
+  const billing = allocateBoardBilling(entries, now);
+
   const tasks = [...taskMap.values()].map(t => {
-    const summary = summarizeTaskTime(t.entries, now);
+    const summary = billing.get(t.taskId);
     const rate = effectiveRate(t.taskRate, t.boardRate);
 
     const days = summary.days.map(day => {

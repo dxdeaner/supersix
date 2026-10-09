@@ -16,7 +16,6 @@ import ReloadPrompt from './components/ReloadPrompt';
 import ReportView from './components/ReportView';
 import TimeTracker from './components/TimeTracker';
 import RunningTimer from './components/RunningTimer';
-import { groupEntriesByTask } from './utils/timeTracking';
 import useFocusTrap from './hooks/useFocusTrap';
 import { useNotifications } from './hooks/useNotifications';
 
@@ -314,7 +313,7 @@ const App = () => {
 
   // Time tracking state
   const [runningEntry, setRunningEntry] = useState(null);
-  const [boardTimeEntries, setBoardTimeEntries] = useState({}); // taskId -> entries
+  const [boardTimeEntries, setBoardTimeEntries] = useState([]); // all entries on the current board
 
   const loadReport = async (start, end) => {
     setReportLoading(true);
@@ -588,7 +587,7 @@ const App = () => {
     if (!boardId) return;
     try {
       const entries = await api.getBoardTime(boardId);
-      setBoardTimeEntries(groupEntriesByTask(entries));
+      setBoardTimeEntries(entries);
     } catch (err) {
       console.error('Error loading time entries:', err);
     }
@@ -1911,7 +1910,7 @@ const App = () => {
                         onUpdateDueDate={updateTaskDueDate}
                         boards={boards.filter(b => !b.archived && b.id !== currentBoard)}
                         onMoveToBoard={moveTaskToBoard}
-                        timeEntries={boardTimeEntries[task.id]}
+                        boardTimeEntries={boardTimeEntries}
                         runningEntry={runningEntry}
                         onStartTimer={startTimer}
                         onStopTimer={stopTimer}
@@ -1973,7 +1972,7 @@ const App = () => {
                         onUpdateDueDate={updateTaskDueDate}
                         boards={boards.filter(b => !b.archived && b.id !== currentBoard)}
                         onMoveToBoard={moveTaskToBoard}
-                        timeEntries={boardTimeEntries[task.id]}
+                        boardTimeEntries={boardTimeEntries}
                         runningEntry={runningEntry}
                         onStartTimer={startTimer}
                         onStopTimer={stopTimer}

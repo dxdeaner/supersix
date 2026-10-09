@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Icon from './Icon';
 import useNow from '../hooks/useNow';
-import { summarizeTaskTime, entryMs, formatClock, formatMinutes } from '../utils/timeTracking';
+import { allocateBoardBilling, entryMs, formatClock, formatMinutes } from '../utils/timeTracking';
 
 const CONFETTI_COLORS = ['#22d3ee', '#f97316', '#22c55e', '#eab308', '#a855f7', '#ec4899'];
 const CONFETTI_PIECES = Array.from({ length: 12 }, (_, i) => {
@@ -32,7 +32,7 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   return { value, label };
 });
 
-const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, onDuplicate, onToggleBlock, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks, onUpdateDueDate, boards = [], onMoveToBoard, timeEntries = [], runningEntry = null, onStartTimer, onStopTimer }) => {
+const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, onComplete, onPostpone, onEdit, onView, onDelete, onMoveUp, onMoveDown, onDemote, onDuplicate, onToggleBlock, canMoveUp, canMoveDown, isMoving, onDragStart, onDragEnd, onDragOver, onDrop, isDragOver, subtasks, onUpdateDueDate, boards = [], onMoveToBoard, boardTimeEntries = [], runningEntry = null, onStartTimer, onStopTimer }) => {
   const [expanded, setExpanded] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [dueDate, setDueDate] = useState('');
@@ -40,8 +40,14 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
   const [movingBoard, setMovingBoard] = useState(false);
   const movingBoardRef = useRef(null);
   const isTimerRunning = runningEntry?.taskId === task.id;
-  const now = useNow(isTimerRunning);
-  const timeSummary = timeEntries.length > 0 ? summarizeTaskTime(timeEntries, now) : null;
+  // Tick every second while this task's timer runs; every 30s while another task's does
+  // (rounding is pooled per board, so another running task can shift this task's billed share)
+  const now = useNow(!!runningEntry, isTimerRunning ? 1000 : 30000);
+  const nowMinute = Math.floor(now / 60000);
+  const timeSummary = useMemo(
+    () => allocateBoardBilling(boardTimeEntries, now).get(task.id) || null,
+    [boardTimeEntries, task.id, nowMinute] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   useEffect(() => {
     if (!movingBoard) return;
