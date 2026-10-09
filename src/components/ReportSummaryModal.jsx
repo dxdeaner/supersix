@@ -12,6 +12,13 @@ function fmtRange(start, end) {
   return start === end ? s : `${s} – ${e}`;
 }
 
+function groupByBoard(tasks) {
+  return tasks.reduce((acc, t) => {
+    (acc[t.boardName] ||= []).push(t);
+    return acc;
+  }, {});
+}
+
 function fmtDue(isoUtc) {
   return new Date(isoUtc).toLocaleDateString(undefined, {
     weekday: 'short', month: 'short', day: 'numeric',
@@ -163,11 +170,14 @@ function buildHtml(summary, lookingAhead) {
   if (hasFuture || hasBlocked) {
     html += `<h2 style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#475569;margin:0 0 8px;">Looking Ahead</h2>`;
     if (hasFuture) {
-      html += `<p style="margin:0 0 4px;font-weight:600;color:#334155;">Due Soon</p><ul style="margin:0 0 12px;padding-left:20px;">`;
-      lookingAhead.futureDue.forEach(t => {
-        html += `<li style="margin-bottom:4px;color:#1e293b;">${t.title} <span style="color:#64748b;font-size:13px;">(due ${fmtDue(t.dueDate)})</span> <span style="color:#94a3b8;font-size:12px;">[${t.boardName}]</span></li>`;
+      html += `<p style="margin:0 0 4px;font-weight:600;color:#334155;">Due Soon</p>`;
+      Object.entries(groupByBoard(lookingAhead.futureDue)).forEach(([board, tasks]) => {
+        html += `<p style="margin:0 0 4px;font-weight:600;color:#475569;">${board}</p><ul style="margin:0 0 12px;padding-left:20px;">`;
+        tasks.forEach(t => {
+          html += `<li style="margin-bottom:4px;color:#1e293b;">${t.title} <span style="color:#64748b;font-size:13px;">(due ${fmtDue(t.dueDate)})</span></li>`;
+        });
+        html += `</ul>`;
       });
-      html += `</ul>`;
     }
     if (hasBlocked) {
       html += `<p style="margin:0 0 4px;font-weight:600;color:#dc2626;">Active Blockers</p><ul style="margin:0 0 12px;padding-left:20px;">`;
@@ -241,8 +251,11 @@ function buildPlainText(summary, lookingAhead) {
     lines.push('LOOKING AHEAD');
     if (hasFuture) {
       lines.push('  Due Soon:');
-      lookingAhead.futureDue.forEach(t => {
-        lines.push(`    → ${t.title} (due ${fmtDue(t.dueDate)}) [${t.boardName}]`);
+      Object.entries(groupByBoard(lookingAhead.futureDue)).forEach(([board, tasks]) => {
+        lines.push(`    ${board}`);
+        tasks.forEach(t => {
+          lines.push(`      → ${t.title} (due ${fmtDue(t.dueDate)})`);
+        });
       });
     }
     if (hasBlocked) {
@@ -512,17 +525,24 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
                   {hasFuture && (
                     <div>
                       <p className="text-slate-400 text-xs font-medium mb-1">Due Soon</p>
-                      <ul className="space-y-1 pl-3">
-                        {lookingAhead.futureDue.map(t => (
-                          <li key={t.id} className="flex items-start gap-2 text-sm">
-                            <Icon name="clock" size={13} className="text-cyan-400 mt-0.5 shrink-0" />
-                            <span className="text-slate-300">{t.title}</span>
-                            <span className="text-slate-500 text-xs mt-0.5 ml-auto shrink-0">
-                              {fmtDue(t.dueDate)} · {t.boardName}
-                            </span>
-                          </li>
+                      <div className="space-y-3">
+                        {Object.entries(groupByBoard(lookingAhead.futureDue)).map(([board, bTasks]) => (
+                          <div key={board}>
+                            <p className="text-slate-300 text-sm font-semibold mb-1">{board}</p>
+                            <ul className="space-y-1 pl-3">
+                              {bTasks.map(t => (
+                                <li key={t.id} className="flex items-start gap-2 text-sm">
+                                  <Icon name="clock" size={13} className="text-cyan-400 mt-0.5 shrink-0" />
+                                  <span className="text-slate-300">{t.title}</span>
+                                  <span className="text-slate-500 text-xs mt-0.5 ml-auto shrink-0">
+                                    {fmtDue(t.dueDate)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     </div>
                   )}
                   {hasBlocked && (
