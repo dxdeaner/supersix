@@ -1,10 +1,11 @@
 // Time tracking helpers.
 // Billing rule (must match api/billing_helper.php): all of a board's time for one local day
-// at one rate is pooled, trimmed to whole minutes, and rounded UP once to the next 15 minutes;
-// the rounded minutes are
+// at one rate is pooled, trimmed to whole minutes, and rounded UP once to the next 15 minutes
+// (with a 3-minute grace past each block); the rounded minutes are
 // then spread across the tasks in the pool in whole minutes. Raw timestamps are never altered.
 
 export const BILLING_INCREMENT_MIN = 15;
+export const BILLING_GRACE_MIN = 3; // minutes past a block boundary that don't bill the next block
 
 const MS_PER_MIN = 60 * 1000;
 
@@ -25,12 +26,17 @@ export const localDateKey = (iso) => {
 export const effectiveRate = (taskRate, boardRate) =>
   taskRate != null ? taskRate : boardRate != null ? boardRate : null;
 
-// Seconds -> billed minutes. Seconds past the last whole minute are ignored (stopping the
-// timer a few seconds late never tips a pool into the next block), then whole minutes are
-// rounded up to 15-minute increments.
+// Seconds -> billed minutes. Seconds past the last whole minute are ignored, then whole
+// minutes round up to the next 15-minute block - unless the time is within the grace period
+// past a block boundary (1h 18m bills as 1h 15m; 1h 19m bills as 1h 30m). Any time at all
+// bills at least one block.
 const billedMinutesForSeconds = (seconds) => {
   const wholeMinutes = Math.floor(seconds / 60);
-  return wholeMinutes <= 0 ? 0 : Math.ceil(wholeMinutes / BILLING_INCREMENT_MIN) * BILLING_INCREMENT_MIN;
+  if (wholeMinutes <= 0) return 0;
+  const blocks = Math.floor(wholeMinutes / BILLING_INCREMENT_MIN);
+  const over = wholeMinutes % BILLING_INCREMENT_MIN;
+  if (blocks === 0 || over === 0) return Math.max(blocks, 1) * BILLING_INCREMENT_MIN;
+  return (over <= BILLING_GRACE_MIN ? blocks : blocks + 1) * BILLING_INCREMENT_MIN;
 };
 
 // Split `total` whole minutes across integer `weights`, largest remainder first.

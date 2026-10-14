@@ -2,18 +2,26 @@
 // billing_helper.php - Shared billing rules (must match src/utils/timeTracking.js)
 //
 // Rounding is pooled per BOARD, per local DAY, per RATE: all finished time in that pool is
-// added up, trimmed to whole minutes, then rounded UP once to the next 15 minutes. The rounded minutes are then spread
+// added up, trimmed to whole minutes, then rounded UP once to the next 15 minutes (with a
+// 3-minute grace past each block). The rounded minutes are then spread
 // across the tasks in the pool in proportion to their time (whole minutes, largest remainder).
 // Time added later to an already-invoiced pool bills only what it adds to the pool's rounded total.
 
+const BILLING_GRACE_MIN = 3; // minutes past a block boundary that don't bill the next block
+
 /**
- * Seconds → billed minutes. Seconds past the last whole minute are ignored (stopping the timer
- * a few seconds late never tips a pool into the next block), then whole minutes are rounded
- * up to 15-minute increments.
+ * Seconds → billed minutes. Seconds past the last whole minute are ignored, then whole
+ * minutes round up to the next 15-minute block - unless the time is within the grace period
+ * past a block boundary (1h 18m bills as 1h 15m; 1h 19m bills as 1h 30m). Any time at all
+ * bills at least one block.
  */
 function billedMinutesForSeconds($seconds) {
     $wholeMinutes = intdiv(max(0, (int)$seconds), 60);
-    return $wholeMinutes <= 0 ? 0 : (int)ceil($wholeMinutes / 15) * 15;
+    if ($wholeMinutes <= 0) return 0;
+    $blocks = intdiv($wholeMinutes, 15);
+    $over = $wholeMinutes % 15;
+    if ($blocks === 0 || $over === 0) return max($blocks, 1) * 15;
+    return ($over <= BILLING_GRACE_MIN ? $blocks : $blocks + 1) * 15;
 }
 
 /**
