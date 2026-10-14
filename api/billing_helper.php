@@ -2,13 +2,18 @@
 // billing_helper.php - Shared billing rules (must match src/utils/timeTracking.js)
 //
 // Rounding is pooled per BOARD, per local DAY, per RATE: all finished time in that pool is
-// added up, then rounded UP once to the next 15 minutes. The rounded minutes are then spread
+// added up, trimmed to whole minutes, then rounded UP once to the next 15 minutes. The rounded minutes are then spread
 // across the tasks in the pool in proportion to their time (whole minutes, largest remainder).
 // Time added later to an already-invoiced pool bills only what it adds to the pool's rounded total.
 
-/** Seconds → billed minutes (rounded up to 15-minute increments). */
+/**
+ * Seconds → billed minutes. Seconds past the last whole minute are ignored (stopping the timer
+ * a few seconds late never tips a pool into the next block), then whole minutes are rounded
+ * up to 15-minute increments.
+ */
 function billedMinutesForSeconds($seconds) {
-    return $seconds <= 0 ? 0 : (int)ceil($seconds / 900) * 15;
+    $wholeMinutes = intdiv(max(0, (int)$seconds), 60);
+    return $wholeMinutes <= 0 ? 0 : (int)ceil($wholeMinutes / 15) * 15;
 }
 
 /**

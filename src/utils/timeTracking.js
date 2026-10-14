@@ -1,6 +1,7 @@
 // Time tracking helpers.
 // Billing rule (must match api/billing_helper.php): all of a board's time for one local day
-// at one rate is pooled and rounded UP once to the next 15 minutes; the rounded minutes are
+// at one rate is pooled, trimmed to whole minutes, and rounded UP once to the next 15 minutes;
+// the rounded minutes are
 // then spread across the tasks in the pool in whole minutes. Raw timestamps are never altered.
 
 export const BILLING_INCREMENT_MIN = 15;
@@ -24,9 +25,13 @@ export const localDateKey = (iso) => {
 export const effectiveRate = (taskRate, boardRate) =>
   taskRate != null ? taskRate : boardRate != null ? boardRate : null;
 
-// Seconds -> billed minutes (rounded up to 15-minute increments)
-const billedMinutesForSeconds = (seconds) =>
-  seconds <= 0 ? 0 : Math.ceil(seconds / (BILLING_INCREMENT_MIN * 60)) * BILLING_INCREMENT_MIN;
+// Seconds -> billed minutes. Seconds past the last whole minute are ignored (stopping the
+// timer a few seconds late never tips a pool into the next block), then whole minutes are
+// rounded up to 15-minute increments.
+const billedMinutesForSeconds = (seconds) => {
+  const wholeMinutes = Math.floor(seconds / 60);
+  return wholeMinutes <= 0 ? 0 : Math.ceil(wholeMinutes / BILLING_INCREMENT_MIN) * BILLING_INCREMENT_MIN;
+};
 
 // Split `total` whole minutes across integer `weights`, largest remainder first.
 // Ties go to the larger weight, then the lower index (callers sort by task id first).
