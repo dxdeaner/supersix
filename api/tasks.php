@@ -593,7 +593,7 @@ function completeTask($pdo) {
         insertJournalAutoLog($pdo, $userId, 'task_completed',
             $journalContent,
             (int)$task['board_id'], $info['board_name'], (int)$data['id'], $info['title'],
-            null, 2);
+            null, 3);
 
         $pdo->commit();
         sendResponse(['message' => 'Task completed successfully']);

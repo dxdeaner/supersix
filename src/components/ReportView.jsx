@@ -98,7 +98,8 @@ function useMetrics(reportData) {
     const reflections = taggedJournal.filter(j => j.tag === 'reflection').length;
     const healthScore = (wins + blockers) > 0 ? Math.round((wins / (wins + blockers)) * 100) : null;
     const hiddenCount = journal.length - visibleJournal.length;
-    const highlightEntries = journal.filter(j => (j.priority ?? 2) === 3);
+    // Task completions are always priority 3 but already appear in the activity log
+    const highlightEntries = journal.filter(j => (j.priority ?? 2) === 3 && j.autoType !== 'task_completed');
 
     // Daily output data (filled with 0s)
     const dailyCounts = {};

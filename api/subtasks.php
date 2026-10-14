@@ -210,7 +210,8 @@ function toggleSubtask($pdo) {
             $info = $infoStmt->fetch();
             insertJournalAutoLog($pdo, $userId, 'subtask_completed',
                 'Completed subtask "' . $info['subtask_title'] . '" on "' . $info['task_title'] . '"',
-                (int)$info['board_id'], $info['board_name'], (int)$info['task_id'], $info['task_title']);
+                (int)$info['board_id'], $info['board_name'], (int)$info['task_id'], $info['task_title'],
+                null, 3);
         }
 
         sendResponse(['message' => 'Subtask updated successfully']);
