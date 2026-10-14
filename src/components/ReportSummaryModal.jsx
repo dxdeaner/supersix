@@ -57,6 +57,16 @@ function buildSummary(reportData, lookingAhead, range, userName, showAutoLogs) {
     j.tag !== 'blocker'
   );
 
+  // ··· (priority 3) entries are highlights, including auto-logs (e.g. completed subtasks).
+  // Skip ones already shown above, and task completions (listed under Completed Tasks).
+  const shownIds = new Set([...wins, ...blockers, ...keyNotes].map(j => j.id));
+  const highlights = journal.filter(j =>
+    (j.priority ?? 2) === 3 &&
+    j.autoType !== 'task_promoted' &&
+    j.autoType !== 'task_completed' &&
+    !shownIds.has(j.id)
+  );
+
   // Metrics
   const totalTasks = tasks.length;
   const boardCount = Object.keys(byBoard).length;
@@ -78,13 +88,13 @@ function buildSummary(reportData, lookingAhead, range, userName, showAutoLogs) {
 
   const dateLabel = fmtRange(range.start, range.end);
 
-  return { byBoard, wins, blockers, keyNotes, tagCounts, totalTasks, boardCount, onTimeRate, healthScore, dateLabel, userName };
+  return { byBoard, wins, highlights, blockers, keyNotes, tagCounts, totalTasks, boardCount, onTimeRate, healthScore, dateLabel, userName };
 }
 
 // ─── HTML generator (for clipboard rich text) ────────────────────────────────
 
 function buildHtml(summary, lookingAhead) {
-  const { byBoard, wins, blockers, keyNotes, tagCounts, totalTasks, boardCount, onTimeRate, healthScore, dateLabel, userName } = summary;
+  const { byBoard, wins, highlights, blockers, keyNotes, tagCounts, totalTasks, boardCount, onTimeRate, healthScore, dateLabel, userName } = summary;
 
   const tag = (label, color) =>
     `<span style="display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;background:${color}20;color:${color};border:1px solid ${color}40;margin-right:4px;">${label}</span>`;
@@ -136,9 +146,9 @@ function buildHtml(summary, lookingAhead) {
   }
 
   // Wins
-  if (wins.length > 0) {
+  if (wins.length + highlights.length > 0) {
     html += `<h2 style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#16a34a;margin:0 0 8px;">Highlights &amp; Wins</h2><ul style="margin:0 0 20px;padding-left:20px;">`;
-    wins.forEach(w => {
+    [...wins, ...highlights].forEach(w => {
       html += `<li style="margin-bottom:4px;color:#1e293b;">${w.content}</li>`;
     });
     html += `</ul>`;
@@ -195,7 +205,7 @@ function buildHtml(summary, lookingAhead) {
 // ─── Plain text generator ─────────────────────────────────────────────────────
 
 function buildPlainText(summary, lookingAhead) {
-  const { byBoard, wins, blockers, keyNotes, tagCounts, totalTasks, boardCount, onTimeRate, healthScore, dateLabel, userName } = summary;
+  const { byBoard, wins, highlights, blockers, keyNotes, tagCounts, totalTasks, boardCount, onTimeRate, healthScore, dateLabel, userName } = summary;
   const lines = [];
 
   lines.push('STATUS REPORT');
@@ -227,9 +237,9 @@ function buildPlainText(summary, lookingAhead) {
     lines.push('');
   }
 
-  if (wins.length > 0) {
+  if (wins.length + highlights.length > 0) {
     lines.push('HIGHLIGHTS & WINS');
-    wins.forEach(w => lines.push(`  • ${w.content}`));
+    [...wins, ...highlights].forEach(w => lines.push(`  • ${w.content}`));
     lines.push('');
   }
 
@@ -338,7 +348,7 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
 
   if (!isOpen) return null;
 
-  const { byBoard, wins, blockers, keyNotes, tagCounts, totalTasks, boardCount, onTimeRate, healthScore, dateLabel } = summary || {};
+  const { byBoard, wins, highlights, blockers, keyNotes, tagCounts, totalTasks, boardCount, onTimeRate, healthScore, dateLabel } = summary || {};
 
   const hasFuture = lookingAhead?.futureDue?.length > 0;
   const hasBlocked = lookingAhead?.blocked?.length > 0;
@@ -464,11 +474,11 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
             )}
 
             {/* Wins */}
-            {wins.length > 0 && (
+            {wins.length + highlights.length > 0 && (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest text-emerald-500 mb-2">Highlights &amp; Wins</p>
                 <ul className="space-y-1 pl-3">
-                  {wins.map((w, i) => (
+                  {[...wins, ...highlights].map((w, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
                       <span className="text-emerald-400 mt-0.5 shrink-0">•</span>
                       {w.content}
