@@ -155,13 +155,12 @@ function buildCsv(boards) {
 
 function buildSummaryText(boards, totals, range) {
   const lines = [`Time report — ${rangeLabel(range)}`, ''];
+  // Client-facing: billable (rounded) time only - no raw time, rates, or per-task amounts
   boards.forEach(b => {
     const money = b.amount > 0 ? ` · ${formatUsd(b.amount)}` : '';
-    const unrated = b.unratedMinutes > 0 ? ` (${formatMinutes(b.unratedMinutes)} without a rate)` : '';
-    lines.push(`${b.name} — ${formatMinutes(b.billedMinutes)}${money}${unrated}`);
+    lines.push(`${b.name} — ${formatMinutes(b.billedMinutes)}${money}`);
     b.tasks.forEach(t => {
-      const priced = t.rate != null ? ` @ ${formatUsd(t.rate)}/hr = ${formatUsd(t.amount)}` : '';
-      lines.push(`  • ${t.title} — ${formatMinutes(t.billedMinutes)}${priced}`);
+      lines.push(`  • ${t.title} — ${formatMinutes(t.billedMinutes)}`);
     });
     lines.push('');
   });
