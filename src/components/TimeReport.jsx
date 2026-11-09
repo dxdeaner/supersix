@@ -186,7 +186,7 @@ const StatCard = ({ label, value, sub, color }) => (
   <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 flex flex-col gap-1">
     <span className="text-slate-400 text-xs uppercase tracking-wide">{label}</span>
     <span className={`text-2xl font-bold ${color || 'text-white'}`}>{value}</span>
-    {sub && <span className="text-slate-500 text-xs">{sub}</span>}
+    {sub && <span className="text-slate-400 text-xs">{sub}</span>}
   </div>
 );
 
@@ -218,7 +218,7 @@ const TaskRow = ({ task }) => {
         aria-expanded={open}
       >
         <span className="flex items-center gap-1.5 min-w-0">
-          <Icon name={open ? 'chevron-down' : 'chevron-right'} size={12} className="text-slate-500 shrink-0" />
+          <Icon name={open ? 'chevron-down' : 'chevron-right'} size={12} className="text-slate-400 shrink-0" />
           {task.status === 'completed' && <Icon name="check-circle" size={12} className="text-cyan-400 shrink-0" />}
           <span className="text-slate-200 truncate">{task.title}</span>
           {task.running && (
@@ -232,7 +232,7 @@ const TaskRow = ({ task }) => {
         </span>
         <span className="text-slate-200 text-right whitespace-nowrap">
           {formatMinutes(task.billedMinutes)}
-          <span className="sm:hidden text-slate-500 text-xs ml-2">{task.amount != null ? formatUsd(task.amount) : ''}</span>
+          <span className="sm:hidden text-slate-400 text-xs ml-2">{task.amount != null ? formatUsd(task.amount) : ''}</span>
         </span>
         <span className="hidden sm:block text-right text-green-400">{task.amount != null ? formatUsd(task.amount) : '—'}</span>
       </button>
@@ -246,7 +246,7 @@ const TaskRow = ({ task }) => {
                 <span>{formatRawMs(day.rawMs)} → <span className="text-slate-200">{formatMinutes(day.billedMinutes)}</span></span>
               </div>
               {day.entries.map(e => (
-                <div key={e.id} className="flex gap-2 text-slate-500 pl-2">
+                <div key={e.id} className="flex gap-2 text-slate-400 pl-2">
                   <span className="whitespace-nowrap">
                     {formatTimeOfDay(e.startedAt)} – {e.endedAt ? formatTimeOfDay(e.endedAt) : 'now'}
                   </span>
@@ -335,7 +335,7 @@ const TimeReport = ({ range }) => {
     return <div className="text-red-400 text-center py-16" role="alert">{error}</div>;
   }
   if (entries.length === 0) {
-    return <div className="text-slate-500 italic text-center py-16">No time tracked in this date range</div>;
+    return <div className="text-slate-400 italic text-center py-16">No time tracked in this date range</div>;
   }
 
   return (
@@ -361,7 +361,7 @@ const TimeReport = ({ range }) => {
       </div>
 
       {allBoards.length === 0 ? (
-        <div className="text-slate-500 italic text-center py-16">No {billing} time in this date range</div>
+        <div className="text-slate-400 italic text-center py-16">No {billing} time in this date range</div>
       ) : (<>
       {/* Board filter + exports */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -382,7 +382,7 @@ const TimeReport = ({ range }) => {
           );
         })}
         {selectedBoards.length > 0 && (
-          <button onClick={() => setSelectedBoards([])} className="text-xs text-slate-500 hover:text-slate-300">
+          <button onClick={() => setSelectedBoards([])} className="text-xs text-slate-400 hover:text-slate-300">
             Show all
           </button>
         )}
@@ -457,7 +457,7 @@ const TimeReport = ({ range }) => {
             <div className="flex items-center gap-2 px-4 py-3">
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: boardColors[b.boardId] }} />
               <span className="text-white font-medium">{b.name}</span>
-              <span className="text-slate-500 text-xs">{formatRawMs(b.rawMs)} raw</span>
+              <span className="text-slate-400 text-xs">{formatRawMs(b.rawMs)} raw</span>
               <span className="ml-auto text-slate-200 text-sm">{formatMinutes(b.billedMinutes)}</span>
               <span className="text-green-400 text-sm font-medium w-24 text-right">{formatUsd(b.amount)}</span>
             </div>

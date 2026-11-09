@@ -62,7 +62,7 @@ function downloadFile(filename, content, type) {
 const LinesTable = ({ lines }) => (
   <table className="w-full text-sm">
     <thead>
-      <tr className="text-slate-500 text-xs uppercase tracking-wide">
+      <tr className="text-slate-400 text-xs uppercase tracking-wide">
         <th className="text-left font-medium py-1">Task</th>
         <th className="text-right font-medium py-1">Time</th>
         <th className="text-right font-medium py-1 hidden sm:table-cell">Rate</th>
@@ -162,15 +162,15 @@ const NewInvoice = ({ boards, range, onCreated }) => {
       {error && <p className="text-red-400 text-sm mb-3" role="alert">{error}</p>}
 
       {loading ? (
-        <p className="text-slate-500 text-sm">Loading unbilled time…</p>
+        <p className="text-slate-400 text-sm">Loading unbilled time…</p>
       ) : preview && preview.entryCount === 0 ? (
-        <p className="text-slate-500 text-sm italic">No unbilled time for this board and period.</p>
+        <p className="text-slate-400 text-sm italic">No unbilled time for this board and period.</p>
       ) : preview ? (
         <>
           {preview.lines.length > 0 ? (
             <LinesTable lines={preview.lines} />
           ) : (
-            <p className="text-slate-500 text-sm italic">
+            <p className="text-slate-400 text-sm italic">
               The unbilled entries are covered by already-invoiced rounding — invoicing will just lock them.
             </p>
           )}
@@ -184,13 +184,13 @@ const NewInvoice = ({ boards, range, onCreated }) => {
               Total <span className="text-white font-medium ml-1">{formatMinutes(preview.minutes)}</span>
               <span className="text-green-400 font-medium ml-3">{formatUsd(preview.total)}</span>
             </span>
-            <span className="text-slate-500 text-xs">
+            <span className="text-slate-400 text-xs">
               Locks {preview.entryCount} time {preview.entryCount === 1 ? 'entry' : 'entries'}
             </span>
             <button
               onClick={create}
               disabled={creating || !issueDate}
-              className="ml-auto flex items-center gap-1.5 px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-40 text-white text-sm rounded-lg transition-colors"
+              className="ml-auto flex items-center gap-1.5 px-4 py-1.5 bg-cyan-700 hover:bg-cyan-800 disabled:opacity-40 text-white text-sm rounded-lg transition-colors"
             >
               <Icon name="lock" size={14} />
               Create invoice
@@ -226,14 +226,14 @@ const InvoiceRow = ({ invoice, onStatus, onDelete }) => {
         className="w-full flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-left hover:bg-slate-700/30 transition-colors"
         aria-expanded={open}
       >
-        <Icon name={open ? 'chevron-down' : 'chevron-right'} size={12} className="text-slate-500" />
+        <Icon name={open ? 'chevron-down' : 'chevron-right'} size={12} className="text-slate-400" />
         <span className="text-white text-sm font-medium break-all">{invoice.number}</span>
         <span className={`text-[11px] px-2 py-0.5 rounded-full ${isPaid ? 'bg-green-600/20 text-green-300' : 'bg-amber-500/15 text-amber-300'}`}>
           {isPaid ? 'Paid' : 'Invoiced'}
         </span>
         <span className="ml-auto text-slate-300 text-sm">{formatMinutes(invoice.minutes)}</span>
         <span className="text-green-400 text-sm font-medium w-24 text-right">{formatUsd(invoice.total)}</span>
-        <span className="basis-full text-slate-500 text-xs pl-5">
+        <span className="basis-full text-slate-400 text-xs pl-5">
           {invoice.boardName} · {periodLabel(invoice.periodStart, invoice.periodEnd)} · Issued {fmtDate(invoice.issueDate)}
           {isPaid && invoice.paidAt && ` · Paid ${new Date(invoice.paidAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`}
         </span>
@@ -364,7 +364,7 @@ const InvoicesTab = ({ range }) => {
       </div>
 
       {visible.length === 0 ? (
-        <div className="text-slate-500 italic text-center py-10">No invoices yet</div>
+        <div className="text-slate-400 italic text-center py-10">No invoices yet</div>
       ) : (
         <div className="space-y-3">
           {visible.map(inv => (

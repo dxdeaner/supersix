@@ -109,7 +109,7 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
 
           <div>
             <label className="block text-slate-300 text-sm font-medium mb-1">
-              Description <span className="text-slate-500 font-normal">(optional)</span>
+              Description <span className="text-slate-400 font-normal">(optional)</span>
             </label>
             <textarea
               value={description}
@@ -133,7 +133,7 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
                     onClick={() => toggleQuickDate(key)}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                       isActive
-                        ? 'bg-cyan-600 text-white border border-cyan-500'
+                        ? 'bg-cyan-700 text-white border border-cyan-500'
                         : 'bg-slate-700 text-slate-300 border border-slate-600 hover:border-slate-500'
                     }`}
                   >
@@ -161,7 +161,7 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
 
           <div>
             <label className="block text-slate-300 text-sm font-medium mb-1">
-              URL <span className="text-slate-500 font-normal">(optional)</span>
+              URL <span className="text-slate-400 font-normal">(optional)</span>
             </label>
             <input
               type="text"
@@ -187,7 +187,7 @@ const QuickAddModal = ({ isOpen, onClose, onAdd, loading, hasActiveRoom }) => {
           <button
             onClick={handleAdd}
             disabled={!newTask.trim() || loading}
-            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded transition-colors"
+            className="px-4 py-2 bg-orange-700 hover:bg-orange-800 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded transition-colors"
           >
             {loading ? 'Adding...' : 'Add Task'}
           </button>

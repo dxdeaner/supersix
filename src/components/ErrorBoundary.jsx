@@ -24,7 +24,7 @@ class ErrorBoundary extends Component {
               <p className="text-slate-400 text-sm mb-4">The app encountered an unexpected error.</p>
               <button
                 onClick={() => window.location.reload()}
-                className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded transition-colors"
+                className="bg-cyan-700 hover:bg-cyan-800 text-white px-4 py-2 rounded transition-colors"
               >
                 Reload App
               </button>

@@ -1192,7 +1192,7 @@ const App = () => {
                 setAuthModalMode('login');
                 setShowAuthModal(true);
               }}
-              className="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              className="bg-cyan-700 hover:bg-cyan-800 text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
               Sign In
             </button>
@@ -1202,7 +1202,7 @@ const App = () => {
                   setAuthModalMode('register');
                   setShowAuthModal(true);
                 }}
-                className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="bg-orange-700 hover:bg-orange-800 text-white px-6 py-3 rounded-lg font-medium transition-colors"
               >
                 Create Account
               </button>
@@ -1279,7 +1279,7 @@ const App = () => {
                 setLoading(true);
                 loadBoards();
               }}
-              className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded transition-colors"
+              className="bg-cyan-700 hover:bg-cyan-800 text-white px-4 py-2 rounded transition-colors"
             >
               Retry
             </button>
@@ -1326,7 +1326,7 @@ const App = () => {
                   <div className="absolute inset-x-0 top-0 h-0.5 bg-cyan-400 rounded-full z-10" />
                 )}
                 <div className={`flex items-center justify-between p-3 rounded-lg transition-colors ${board.id === currentBoard
-                  ? 'bg-cyan-600 text-white shadow-lg shadow-cyan-600/20'
+                  ? 'bg-cyan-700 text-white shadow-lg shadow-cyan-600/20'
                   : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                   }`}>
                   <button
@@ -1341,7 +1341,7 @@ const App = () => {
 
                   <div className="flex items-center space-x-2">
                     <span className={`text-xs px-2 py-1 rounded ${board.id === currentBoard
-                      ? 'bg-cyan-500 text-white'
+                      ? 'bg-cyan-700 text-white'
                       : 'bg-slate-600 text-slate-300'
                       }`}>
                       {getBoardStats(board.id)}
@@ -1349,7 +1349,7 @@ const App = () => {
                     <button
                       onClick={() => setBoardMenuOpen(boardMenuOpen === board.id ? null : board.id)}
                       className={`board-menu-button p-1 rounded transition-colors relative ${board.id === currentBoard
-                        ? 'hover:bg-cyan-500 text-white'
+                        ? 'hover:bg-cyan-700 text-white'
                         : 'hover:bg-slate-600 text-slate-400'
                         } ${boardMenuOpen === board.id ? 'bg-slate-600' : ''}`}
                       aria-label="Board options"
@@ -1409,7 +1409,7 @@ const App = () => {
               <h3 className="text-sm font-medium text-slate-400 mb-2">Archived</h3>
               <div className="space-y-1">
                 {boards.filter(board => board.archived).map(board => (
-                  <div key={board.id} className="p-2 text-slate-500 text-sm">
+                  <div key={board.id} className="p-2 text-slate-400 text-sm">
                     <span>{board.name}</span>
                   </div>
                 ))}
@@ -1450,7 +1450,7 @@ const App = () => {
                   <>
                     <button
                       onClick={() => { setViewMode(viewMode === 'journal' ? 'board' : 'journal'); }}
-                      className={`p-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                      className={`p-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
                       aria-label="Toggle journal"
                       aria-pressed={viewMode === 'journal'}
                     >
@@ -1458,7 +1458,7 @@ const App = () => {
                     </button>
                     <button
                       onClick={() => { setViewMode(viewMode === 'report' ? 'board' : 'report'); }}
-                      className={`p-2 rounded-lg transition-colors ${viewMode === 'report' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                      className={`p-2 rounded-lg transition-colors ${viewMode === 'report' ? 'bg-cyan-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
                       aria-label="Toggle report"
                       aria-pressed={viewMode === 'report'}
                     >
@@ -1505,7 +1505,7 @@ const App = () => {
                               className="w-full text-left px-3 py-2 hover:bg-slate-700 transition-colors"
                             >
                               <p className="text-white text-xs font-medium truncate">{t.title}</p>
-                              <p className="text-slate-500 text-xs">{t.boardName}</p>
+                              <p className="text-slate-400 text-xs">{t.boardName}</p>
                             </button>
                           ))}
                         </div>
@@ -1533,7 +1533,7 @@ const App = () => {
                   <>
                     <button
                       onClick={() => { setViewMode(viewMode === 'journal' ? 'board' : 'journal'); }}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${viewMode === 'journal' ? 'bg-cyan-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
                       aria-label="Toggle journal"
                       aria-pressed={viewMode === 'journal'}
                     >
@@ -1542,7 +1542,7 @@ const App = () => {
                     </button>
                     <button
                       onClick={() => { setViewMode(viewMode === 'report' ? 'board' : 'report'); }}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${viewMode === 'report' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors ${viewMode === 'report' ? 'bg-cyan-700 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
                       aria-label="Toggle report"
                       aria-pressed={viewMode === 'report'}
                     >
@@ -1589,7 +1589,7 @@ const App = () => {
                                 className="w-full text-left px-3 py-2 hover:bg-slate-700 transition-colors"
                               >
                                 <p className="text-white text-xs font-medium truncate">{t.title}</p>
-                                <p className="text-slate-500 text-xs">{t.boardName}</p>
+                                <p className="text-slate-400 text-xs">{t.boardName}</p>
                               </button>
                             ))}
                           </div>
@@ -1656,7 +1656,7 @@ const App = () => {
                 onKeyDown={(e) => { if (e.key === 'Escape') setSearchQuery(''); }}
                 placeholder="Search tasks..."
                 aria-label="Search tasks"
-                className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-10 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-colors"
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-10 pr-10 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 transition-colors"
               />
               {searchQuery && (
                 <button
@@ -1674,7 +1674,7 @@ const App = () => {
           <div className={`mb-6 ${windowWidth >= 768 ? 'relative flex justify-center' : 'flex justify-center items-center space-x-4'}`}>
             <button
               onClick={() => setShowQuickAddModal(true)}
-              className={`w-10 h-10 bg-orange-500 hover:bg-orange-600 text-white rounded-full flex items-center justify-center transition-all hover:shadow-lg shadow-orange-500/20 ${windowWidth >= 768 ? 'absolute left-0 top-1/2 transform -translate-y-1/2' : ''}`}
+              className={`w-10 h-10 bg-orange-700 hover:bg-orange-800 text-white rounded-full flex items-center justify-center transition-all hover:shadow-lg shadow-orange-500/20 ${windowWidth >= 768 ? 'absolute left-0 top-1/2 transform -translate-y-1/2' : ''}`}
               aria-label="Add new task"
             >
               <Icon name="plus" size={20} />
@@ -1689,7 +1689,7 @@ const App = () => {
                 tabIndex={activeTab === 'active' ? 0 : -1}
                 onClick={() => setActiveTab('active')}
                 onKeyDown={handleTabKeyDown}
-                className={`px-6 py-2 rounded-md transition-all ${activeTab === 'active' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
+                className={`px-6 py-2 rounded-md transition-all ${activeTab === 'active' ? 'bg-cyan-700 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
               >
                 Active & Queue
               </button>
@@ -1701,7 +1701,7 @@ const App = () => {
                 tabIndex={activeTab === 'completed' ? 0 : -1}
                 onClick={() => setActiveTab('completed')}
                 onKeyDown={handleTabKeyDown}
-                className={`px-6 py-2 rounded-md transition-all ${activeTab === 'completed' ? 'bg-cyan-500 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
+                className={`px-6 py-2 rounded-md transition-all ${activeTab === 'completed' ? 'bg-cyan-700 text-white shadow-lg' : 'text-slate-300 hover:text-white'}`}
               >
                 Completed
               </button>
@@ -1735,7 +1735,7 @@ const App = () => {
 
                   {totalResults === 0 && (
                     <div className="text-center py-12">
-                      <div className="text-slate-500 mb-2">
+                      <div className="text-slate-400 mb-2">
                         <Icon name="search" size={40} />
                       </div>
                       <p className="text-slate-400">No tasks match your search</p>
@@ -1804,7 +1804,7 @@ const App = () => {
                               <div>
                                 <h4 className="text-white font-medium line-through opacity-75">{task.title}</h4>
                                 {task.description && (
-                                  <p className="text-slate-500 text-sm mt-1 line-clamp-1">{task.description}</p>
+                                  <p className="text-slate-400 text-sm mt-1 line-clamp-1">{task.description}</p>
                                 )}
                               </div>
                               <div className="flex items-center space-x-3 flex-shrink-0 ml-2">
@@ -1855,7 +1855,7 @@ const App = () => {
               </p>
               <button
                 onClick={() => setShowQuickAddModal(true)}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center space-x-2"
+                className="bg-orange-700 hover:bg-orange-800 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center space-x-2"
               >
                 <Icon name="plus" size={20} />
                 <span>Add Your First Task</span>
@@ -1925,7 +1925,7 @@ const App = () => {
                         <div className="absolute left-0 -top-3 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold bg-slate-700 text-slate-300">
                           {slotIndex + 1}
                         </div>
-                        <div className="ml-4 text-slate-500 italic">
+                        <div className="ml-4 text-slate-400 italic">
                           {dragSource === 'queue' ? 'Drop here to activate' : 'Empty slot - promote from queue or add new task'}
                         </div>
                       </div>
@@ -2017,7 +2017,7 @@ const App = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-slate-500 italic text-center py-8">
+                    <div className="text-slate-400 italic text-center py-8">
                       Queue is empty - add tasks to build momentum
                     </div>
                   )}
@@ -2037,7 +2037,7 @@ const App = () => {
                       <button
                         onClick={addTask}
                         disabled={!newTask.trim()}
-                        className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors"
+                        className="bg-cyan-700 hover:bg-cyan-800 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors"
                       >
                         Add
                       </button>
@@ -2151,7 +2151,7 @@ const App = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-slate-500 italic text-center py-8">No completed tasks yet</p>
+                <p className="text-slate-400 italic text-center py-8">No completed tasks yet</p>
               )}
             </div>
           )}
@@ -2179,7 +2179,7 @@ const App = () => {
                 value={journalSearch}
                 onChange={(e) => setJournalSearch(e.target.value)}
                 placeholder="Search entries…"
-                className="flex-1 min-w-[160px] bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                className="flex-1 min-w-[160px] bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500"
               />
               <input
                 type="date"
@@ -2228,9 +2228,9 @@ const App = () => {
             {/* Entries feed — chronological, oldest first */}
             <div className="flex-1 min-h-0 overflow-y-auto journal-scroll">
             {journalLoading && journalEntries.length === 0 ? (
-              <p className="text-slate-500 text-center py-8">Loading entries...</p>
+              <p className="text-slate-400 text-center py-8">Loading entries...</p>
             ) : journalEntries.length === 0 ? (
-              <p className="text-slate-500 italic text-center py-8">No journal entries yet. Write your first one below!</p>
+              <p className="text-slate-400 italic text-center py-8">No journal entries yet. Write your first one below!</p>
             ) : (
               <div className="divide-y divide-slate-700/50 mb-4 overflow-hidden">
                 {journalHasMore && (
@@ -2332,7 +2332,7 @@ const App = () => {
                                 <button
                                   onClick={saveJournalEdit}
                                   disabled={!editingJournalContent.trim()}
-                                  className="px-3 py-1 text-sm bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 text-white rounded transition-colors"
+                                  className="px-3 py-1 text-sm bg-cyan-700 hover:bg-cyan-800 disabled:bg-slate-600 text-white rounded transition-colors"
                                 >
                                   Save
                                 </button>
@@ -2343,11 +2343,11 @@ const App = () => {
                               className="flex items-start gap-1.5 sm:gap-2 text-sm w-full cursor-pointer"
                               onClick={() => setExpandedJournalId(expandedJournalId === entry.id ? null : entry.id)}
                             >
-                              <span className="text-slate-500 text-xs shrink-0 mt-0.5">
+                              <span className="text-slate-400 text-xs shrink-0 mt-0.5">
                                 {entryDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                               </span>
                               {isAuto && (
-                                <span className="text-slate-500 shrink-0 mt-0.5">
+                                <span className="text-slate-400 shrink-0 mt-0.5">
                                   <Icon name="clock" size={12} />
                                 </span>
                               )}
@@ -2368,7 +2368,7 @@ const App = () => {
                                 {entry.content}
                               </span>
                               {expandedJournalId !== entry.id && isAuto && entry.boardName && (
-                                <span className="text-slate-500 text-xs shrink-0 hidden sm:inline mt-0.5">
+                                <span className="text-slate-400 text-xs shrink-0 hidden sm:inline mt-0.5">
                                   · {entry.boardName}
                                 </span>
                               )}
@@ -2427,7 +2427,7 @@ const App = () => {
                 <button
                   onClick={addJournalEntry}
                   disabled={!newJournalEntry.trim()}
-                  className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors flex-shrink-0"
+                  className="bg-cyan-700 hover:bg-cyan-800 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded font-medium transition-colors flex-shrink-0"
                 >
                   Send
                 </button>
@@ -2555,7 +2555,7 @@ const App = () => {
               <button
                 onClick={createBoard}
                 disabled={!newBoardName.trim()}
-                className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded transition-colors"
+                className="px-4 py-2 bg-cyan-700 hover:bg-cyan-800 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded transition-colors"
               >
                 Create Board
               </button>
@@ -2604,7 +2604,7 @@ const App = () => {
                   />
                   <span className="text-slate-400 text-sm">/hr</span>
                 </div>
-                <p className="text-slate-500 text-xs mt-1">Tasks can override this in their Time section.</p>
+                <p className="text-slate-400 text-xs mt-1">Tasks can override this in their Time section.</p>
               </div>
             </div>
 
@@ -2618,7 +2618,7 @@ const App = () => {
               <button
                 onClick={() => editBoard(editingBoard.id, editingBoard.name, editingBoard.hourlyRate)}
                 disabled={!editingBoard.name.trim()}
-                className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded transition-colors"
+                className="px-4 py-2 bg-cyan-700 hover:bg-cyan-800 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded transition-colors"
               >
                 Save
               </button>
@@ -2696,7 +2696,7 @@ const App = () => {
                       <span className={`text-sm ${new Date(viewingTask.dueDate) < new Date() ? 'text-red-400' : 'text-slate-300'}`}>
                         {new Date(viewingTask.dueDate).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                       </span>
-                      <Icon name="edit-3" size={12} className="text-slate-500 opacity-0 group-hover/due:opacity-100 transition-opacity" />
+                      <Icon name="edit-3" size={12} className="text-slate-400 opacity-0 group-hover/due:opacity-100 transition-opacity" />
                     </div>
                   )}
                 </div>
@@ -2740,7 +2740,7 @@ const App = () => {
               {viewingTask.status !== 'completed' && (
                 <button
                   onClick={viewToEdit}
-                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded transition-colors flex items-center space-x-1"
+                  className="px-4 py-2 bg-cyan-700 hover:bg-cyan-800 text-white rounded transition-colors flex items-center space-x-1"
                 >
                   <Icon name="edit-3" size={14} />
                   <span>Edit</span>
@@ -2861,7 +2861,7 @@ const App = () => {
                         })}
                         className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                           isActive
-                            ? 'bg-cyan-600 text-white border border-cyan-500'
+                            ? 'bg-cyan-700 text-white border border-cyan-500'
                             : 'bg-slate-700 text-slate-300 border border-slate-600 hover:border-slate-500'
                         }`}
                       >
@@ -2883,7 +2883,7 @@ const App = () => {
               </div>
 
               <div>
-                <label className="block text-slate-300 text-sm font-medium mb-1">URL <span className="text-slate-500 font-normal">(optional)</span></label>
+                <label className="block text-slate-300 text-sm font-medium mb-1">URL <span className="text-slate-400 font-normal">(optional)</span></label>
                 <input
                   type="text"
                   value={editingTask.url}
@@ -2932,7 +2932,7 @@ const App = () => {
                       </div>
                     </div>
                     <div>
-                      <p className="text-slate-400 text-xs mb-2">Days of month <span className="text-slate-500">(e.g. 1, 15)</span></p>
+                      <p className="text-slate-400 text-xs mb-2">Days of month <span className="text-slate-400">(e.g. 1, 15)</span></p>
                       <input
                         type="text"
                         value={editingTask.recurrenceDom.join(', ')}
@@ -2975,7 +2975,7 @@ const App = () => {
               <button
                 onClick={saveEdit}
                 disabled={!editingTask.title.trim()}
-                className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded transition-colors"
+                className="px-4 py-2 bg-cyan-700 hover:bg-cyan-800 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded transition-colors"
               >
                 Save
               </button>

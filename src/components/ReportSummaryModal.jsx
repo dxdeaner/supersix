@@ -399,11 +399,11 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
         {/* Subject line */}
         <div className="px-6 pt-4 pb-0">
           <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2">
-            <span className="text-slate-500 text-xs font-medium uppercase tracking-wide shrink-0">Subject</span>
+            <span className="text-slate-400 text-xs font-medium uppercase tracking-wide shrink-0">Subject</span>
             <span className="text-slate-300 text-sm flex-1 truncate">{subject}</span>
             <button
               onClick={handleCopySubject}
-              className="text-slate-500 hover:text-slate-300 transition-colors shrink-0"
+              className="text-slate-400 hover:text-slate-300 transition-colors shrink-0"
               title="Copy subject"
             >
               <Icon name="copy" size={13} />
@@ -413,13 +413,13 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
 
         {/* Document preview */}
         {!summary ? (
-          <div className="px-6 py-12 text-center text-slate-500">Loading…</div>
+          <div className="px-6 py-12 text-center text-slate-400">Loading…</div>
         ) : (
           <div className="px-6 pt-5 pb-2 space-y-5">
 
             {/* Summary paragraph */}
             <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-1.5">Summary</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Summary</p>
               <p className="text-slate-300 text-sm leading-relaxed">
                 {totalTasks} task{totalTasks !== 1 ? 's' : ''} completed across {boardCount} board{boardCount !== 1 ? 's' : ''}
                 {onTimeRate != null && <>, with a <span className="text-white font-medium">{onTimeRate}%</span> on-time rate</>}
@@ -437,7 +437,7 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
             {/* Journal activity by tag */}
             {tagCounts && Object.keys(tagCounts).length > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">Journal Activity</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">Journal Activity</p>
                 <div className="flex flex-wrap gap-1.5">
                   {Object.entries(tagCounts).map(([t, n]) => (
                     <span key={t} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${TAG_STYLES[t] || ''}`}>
@@ -451,7 +451,7 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
             {/* Completed tasks by board */}
             {totalTasks > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">Completed Tasks</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">Completed Tasks</p>
                 <div className="space-y-3">
                   {Object.entries(byBoard).map(([board, bTasks]) => (
                     <div key={board}>
@@ -462,7 +462,7 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
                             <Icon name="check-circle" size={13} className="text-cyan-400 mt-0.5 shrink-0" />
                             <span className="text-slate-300">{t.title}</span>
                             {t.result && (
-                              <span className="text-slate-500 text-xs mt-0.5">— {t.result}</span>
+                              <span className="text-slate-400 text-xs mt-0.5">— {t.result}</span>
                             )}
                           </li>
                         ))}
@@ -506,11 +506,11 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
             {/* Key notes */}
             {keyNotes.length > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">Key Notes</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">Key Notes</p>
                 <ul className="space-y-1.5 pl-3">
                   {keyNotes.map((n, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm">
-                      <span className="text-slate-500 mt-0.5 shrink-0">•</span>
+                      <span className="text-slate-400 mt-0.5 shrink-0">•</span>
                       <span>
                         {n.tag && (
                           <span className={`inline-block text-xs px-1.5 py-0.5 rounded-full border mr-1.5 ${TAG_STYLES[n.tag] || ''}`}>
@@ -530,7 +530,7 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
               <div className="text-slate-600 text-sm italic">Loading upcoming tasks…</div>
             ) : (hasFuture || hasBlocked) ? (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-2">Looking Ahead</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">Looking Ahead</p>
                 <div className="space-y-3">
                   {hasFuture && (
                     <div>
@@ -544,7 +544,7 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
                                 <li key={t.id} className="flex items-start gap-2 text-sm">
                                   <Icon name="clock" size={13} className="text-cyan-400 mt-0.5 shrink-0" />
                                   <span className="text-slate-300">{t.title}</span>
-                                  <span className="text-slate-500 text-xs mt-0.5 ml-auto shrink-0">
+                                  <span className="text-slate-400 text-xs mt-0.5 ml-auto shrink-0">
                                     {fmtDue(t.dueDate)}
                                   </span>
                                 </li>
@@ -563,7 +563,7 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
                           <li key={t.id} className="flex items-start gap-2 text-sm">
                             <Icon name="alert-triangle" size={13} className="text-red-400 mt-0.5 shrink-0" />
                             <span className="text-slate-300">{t.title}</span>
-                            <span className="text-slate-500 text-xs mt-0.5 ml-auto shrink-0">{t.boardName}</span>
+                            <span className="text-slate-400 text-xs mt-0.5 ml-auto shrink-0">{t.boardName}</span>
                           </li>
                         ))}
                       </ul>
@@ -575,7 +575,7 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
 
             {/* Empty state */}
             {totalTasks === 0 && wins.length === 0 && blockers.length === 0 && keyNotes.length === 0 && (
-              <p className="text-slate-500 italic text-sm text-center py-4">No activity in this date range.</p>
+              <p className="text-slate-400 italic text-sm text-center py-4">No activity in this date range.</p>
             )}
           </div>
         )}
@@ -586,7 +586,7 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <div
               onClick={() => setShowAutoLogs(v => !v)}
-              className={`w-8 h-4.5 rounded-full relative transition-colors ${showAutoLogs ? 'bg-cyan-600' : 'bg-slate-700'}`}
+              className={`w-8 h-4.5 rounded-full relative transition-colors ${showAutoLogs ? 'bg-cyan-700' : 'bg-slate-700'}`}
               style={{ width: '32px', height: '18px' }}
             >
               <span
@@ -608,7 +608,7 @@ const ReportSummaryModal = ({ isOpen, onClose, reportData, range, userName }) =>
             </button>
             <button
               onClick={handleCopyRich}
-              className="px-4 py-1.5 text-sm rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white transition-colors flex items-center gap-1.5 font-medium"
+              className="px-4 py-1.5 text-sm rounded-lg bg-cyan-700 hover:bg-cyan-800 text-white transition-colors flex items-center gap-1.5 font-medium"
             >
               <Icon name={copyState === 'copied' ? 'check' : copyState === 'error' ? 'alert-circle' : 'clipboard'} size={13} />
               {copyState === 'copied' ? 'Copied!' : copyState === 'error' ? 'Failed' : 'Copy for Email'}

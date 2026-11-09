@@ -137,7 +137,7 @@ const StatCard = ({ label, value, sub, color }) => (
   <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 flex flex-col gap-1">
     <span className="text-slate-400 text-xs uppercase tracking-wide">{label}</span>
     <span className={`text-2xl font-bold ${color || 'text-white'}`}>{value}</span>
-    {sub && <span className="text-slate-500 text-xs">{sub}</span>}
+    {sub && <span className="text-slate-400 text-xs">{sub}</span>}
   </div>
 );
 
@@ -274,7 +274,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
             onClick={() => handlePreset(p.id)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               preset === p.id
-                ? 'bg-cyan-600 text-white'
+                ? 'bg-cyan-700 text-white'
                 : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
             }`}
           >
@@ -307,7 +307,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
           <button
             onClick={handleApplyCustom}
             disabled={!customStart || !customEnd || customStart > customEnd}
-            className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
+            className="px-4 py-1.5 bg-cyan-700 hover:bg-cyan-800 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
           >
             Apply
           </button>
@@ -412,7 +412,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
             <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
               <h3 className="text-sm font-medium text-slate-300 mb-3">When You Complete Tasks</h3>
               {reportData.tasks.length === 0 ? (
-                <p className="text-slate-500 text-sm italic py-4 text-center">No tasks completed</p>
+                <p className="text-slate-400 text-sm italic py-4 text-center">No tasks completed</p>
               ) : (
                 <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={metrics.timeData} layout="vertical" margin={{ top: 0, right: 12, left: 8, bottom: 0 }}>
@@ -443,7 +443,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
             <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
               <h3 className="text-sm font-medium text-slate-300 mb-3">Journal Tag Breakdown</h3>
               {metrics.tagData.length === 0 ? (
-                <p className="text-slate-500 text-sm italic py-4 text-center">No tagged entries</p>
+                <p className="text-slate-400 text-sm italic py-4 text-center">No tagged entries</p>
               ) : (
                 <div className="flex items-center gap-4">
                   <PieChart width={140} height={140}>
@@ -475,7 +475,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
                       <div key={d.name} className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
                         <span className="text-slate-300 text-sm">{d.name}</span>
-                        <span className="text-slate-500 text-sm ml-auto pl-3">{d.value}</span>
+                        <span className="text-slate-400 text-sm ml-auto pl-3">{d.value}</span>
                       </div>
                     ))}
                   </div>
@@ -500,7 +500,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
                               {entry.tag}
                             </span>
                           )}
-                          <span className="text-slate-500 text-xs ml-auto">{formatTime(entry.createdAt)}</span>
+                          <span className="text-slate-400 text-xs ml-auto">{formatTime(entry.createdAt)}</span>
                         </div>
                         <p className="text-slate-200 text-sm">{entry.content}</p>
                       </div>
@@ -513,7 +513,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
 
           {/* Daily Log */}
           {dailyLog.length === 0 ? (
-            <div className="text-slate-500 italic text-center py-10">
+            <div className="text-slate-400 italic text-center py-10">
               No activity in this date range
             </div>
           ) : (
@@ -542,7 +542,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
                                   <span className="text-xs bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded">
                                     {item.boardName}
                                   </span>
-                                  <span className="text-slate-500 text-xs ml-auto">{formatTime(item.completedAt)}</span>
+                                  <span className="text-slate-400 text-xs ml-auto">{formatTime(item.completedAt)}</span>
                                 </div>
                                 {item.result && (
                                   <p className="text-slate-400 text-xs mt-1 leading-relaxed">{item.result}</p>
@@ -552,7 +552,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
                           </div>
                         ) : (
                           <div className={`flex items-start gap-2 px-4 py-2.5 rounded-lg ${item.entryType === 'auto' ? 'opacity-60' : ''}`}>
-                            <span className="text-slate-500 text-xs w-16 shrink-0 pt-0.5">{formatTime(item.createdAt)}</span>
+                            <span className="text-slate-400 text-xs w-16 shrink-0 pt-0.5">{formatTime(item.createdAt)}</span>
                             <div className="min-w-0 flex-1">
                               {item.tag && (
                                 <span className={`inline-block text-xs px-1.5 py-0.5 rounded-full border mr-2 mb-1 ${TAG_STYLES[item.tag] || ''}`}>
@@ -560,7 +560,7 @@ const ReportView = ({ reportData, reportLoading, onLoad, user }) => {
                                 </span>
                               )}
                               {item.entryType === 'auto' ? (
-                                <span className="text-slate-500 text-sm italic">{item.content}</span>
+                                <span className="text-slate-400 text-sm italic">{item.content}</span>
                               ) : (
                                 <span className="text-slate-300 text-sm">{item.content}</span>
                               )}

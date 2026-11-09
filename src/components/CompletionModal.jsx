@@ -49,7 +49,7 @@ const CompletionModal = ({ isOpen, onClose, onDone, onUndo, taskTitle, loading }
         <div className="space-y-4">
           <div>
             <label className="block text-slate-300 text-sm font-medium mb-1">
-              Result / Notes <span className="text-slate-500 font-normal">(optional)</span>
+              Result / Notes <span className="text-slate-400 font-normal">(optional)</span>
             </label>
             <textarea
               value={result}
@@ -62,7 +62,7 @@ const CompletionModal = ({ isOpen, onClose, onDone, onUndo, taskTitle, loading }
 
           <div>
             <label className="block text-slate-300 text-sm font-medium mb-1">
-              Follow-up Task <span className="text-slate-500 font-normal">(optional)</span>
+              Follow-up Task <span className="text-slate-400 font-normal">(optional)</span>
             </label>
             <input
               type="text"
@@ -78,7 +78,7 @@ const CompletionModal = ({ isOpen, onClose, onDone, onUndo, taskTitle, loading }
 
           <div>
             <label className="block text-slate-300 text-sm font-medium mb-1">
-              Follow-up URL <span className="text-slate-500 font-normal">(optional)</span>
+              Follow-up URL <span className="text-slate-400 font-normal">(optional)</span>
             </label>
             <input
               type="text"
@@ -102,7 +102,7 @@ const CompletionModal = ({ isOpen, onClose, onDone, onUndo, taskTitle, loading }
           <button
             onClick={handleDone}
             disabled={loading}
-            className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
+            className="px-4 py-2 bg-cyan-700 hover:bg-cyan-800 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded font-medium transition-colors"
           >
             {loading ? 'Saving...' : 'Done'}
           </button>

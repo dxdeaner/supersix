@@ -19,9 +19,9 @@ const CONFETTI_PIECES = Array.from({ length: 12 }, (_, i) => {
 const getDueDateColor = (dueDate) => {
   const now = new Date();
   const due = new Date(dueDate);
-  if (due < now) return 'bg-red-500';
-  if (due - now < 24 * 60 * 60 * 1000) return 'bg-orange-500';
-  return 'bg-green-600';
+  if (due < now) return 'bg-red-600';
+  if (due - now < 24 * 60 * 60 * 1000) return 'bg-orange-700';
+  return 'bg-green-700';
 };
 
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
@@ -121,7 +121,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
       )}
 
       <div className={`${isCompleting ? 'opacity-30' : ''} transition-opacity duration-200`}>
-        <div className={`absolute left-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isCurrentFocus ? 'bg-gradient-to-r from-cyan-400 to-cyan-500 text-white shadow-lg' : 'bg-slate-700 text-slate-300'}`}>
+        <div className={`absolute left-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isCurrentFocus ? 'bg-gradient-to-r from-cyan-400 to-cyan-500 text-slate-900 shadow-lg' : 'bg-slate-700 text-slate-300'}`}>
           {index + 1}
         </div>
 
@@ -159,7 +159,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
               {task.description && (
                 <button
                   onClick={() => setExpanded(!expanded)}
-                  className="ml-2 text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0"
+                  className="ml-2 text-slate-400 hover:text-slate-300 transition-colors flex-shrink-0"
                   aria-expanded={expanded}
                   aria-label={expanded ? 'Hide description' : 'Show description'}
                 >
@@ -213,7 +213,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
                       }
                       setEditingDueDate(false);
                     }}
-                    className="bg-cyan-600 hover:bg-cyan-700 text-white px-1.5 py-0.5 rounded text-xs transition-colors"
+                    className="bg-cyan-700 hover:bg-cyan-800 text-white px-1.5 py-0.5 rounded text-xs transition-colors"
                   >
                     Save
                   </button>
@@ -254,7 +254,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
           <div className="flex items-center flex-wrap gap-2">
             <button
               onClick={() => onComplete(task.id)}
-              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center space-x-1"
+              className="bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center space-x-1"
             >
               <Icon name="check" size={14} />
               <span>Complete</span>
@@ -277,7 +277,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
             )}
             <button
               onClick={() => onDemote(task.id)}
-              className="border border-slate-500 text-slate-500 hover:border-slate-400 hover:text-slate-400 bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
+              className="border border-slate-500 text-slate-400 hover:border-slate-400 hover:text-slate-300 bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
               title="Move to Queue"
             >
               <Icon name="arrow-down" size={12} />
@@ -285,7 +285,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
             </button>
             <button
               onClick={() => onDuplicate(task.id)}
-              className="border border-slate-500 text-slate-500 hover:border-slate-400 hover:text-slate-400 bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
+              className="border border-slate-500 text-slate-400 hover:border-slate-400 hover:text-slate-300 bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
               title="Duplicate task"
             >
               <Icon name="copy" size={12} />
@@ -296,7 +296,7 @@ const TaskCard = ({ task, index, isCurrentFocus, isHighlighted, isCompleting, on
               <div className="relative" ref={movingBoardRef}>
                 <button
                   onClick={() => setMovingBoard(v => !v)}
-                  className="border border-slate-500 text-slate-500 hover:border-slate-400 hover:text-slate-400 bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
+                  className="border border-slate-500 text-slate-400 hover:border-slate-400 hover:text-slate-300 bg-transparent px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
                   title="Move to board"
                 >
                   <Icon name="log-in" size={12} />

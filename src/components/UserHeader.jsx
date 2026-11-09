@@ -26,7 +26,7 @@ const UserHeader = ({ user, onLogout, onOpenAuth, notifPermission, requestNotifP
       <div className="flex items-center space-x-2">
         <button
           onClick={() => onOpenAuth()}
-          className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded font-medium transition-colors"
+          className="bg-cyan-700 hover:bg-cyan-800 text-white px-4 py-2 rounded font-medium transition-colors"
         >
           Sign In
         </button>
@@ -43,7 +43,7 @@ const UserHeader = ({ user, onLogout, onOpenAuth, notifPermission, requestNotifP
         aria-expanded={dropdownOpen}
         aria-haspopup="true"
       >
-        <div className="w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center">
+        <div className="w-8 h-8 bg-cyan-700 rounded-full flex items-center justify-center">
           <Icon name="user" size={16} />
         </div>
         <span className="hidden sm:block">{user.name}</span>

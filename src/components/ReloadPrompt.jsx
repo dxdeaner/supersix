@@ -31,7 +31,7 @@ const ReloadPrompt = () => {
         </div>
         <button
           onClick={handleUpdate}
-          className="bg-cyan-600 hover:bg-cyan-700 text-white text-sm px-3 py-1.5 rounded transition-colors whitespace-nowrap"
+          className="bg-cyan-700 hover:bg-cyan-800 text-white text-sm px-3 py-1.5 rounded transition-colors whitespace-nowrap"
         >
           Refresh
         </button>

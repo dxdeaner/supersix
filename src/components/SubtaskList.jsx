@@ -87,7 +87,7 @@ const SubtaskList = ({ taskId, subtasks, onAdd = () => {}, onToggle = () => {}, 
               aria-checked={subtask.completed}
               aria-label={subtask.title}
               className={`w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all ${subtask.completed
-                ? 'bg-green-500 border-green-500 text-white'
+                ? 'bg-green-600 border-green-600 text-white'
                 : 'border-slate-500 hover:border-green-400'
                 }`}
             >
@@ -145,7 +145,7 @@ const SubtaskList = ({ taskId, subtasks, onAdd = () => {}, onToggle = () => {}, 
           <button
             onClick={handleAdd}
             disabled={!newSubtask.trim() || loading}
-            className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-sm transition-colors"
+            className="bg-cyan-700 hover:bg-cyan-800 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-sm transition-colors"
           >
             Add
           </button>

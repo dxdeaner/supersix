@@ -164,7 +164,7 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess, mode = 'login' }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded font-medium transition-colors"
+            className="w-full bg-cyan-700 hover:bg-cyan-800 disabled:bg-slate-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded font-medium transition-colors"
           >
             {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
           </button>

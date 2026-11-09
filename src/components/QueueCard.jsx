@@ -4,9 +4,9 @@ import Icon from './Icon';
 const getDueDateColor = (dueDate) => {
   const now = new Date();
   const due = new Date(dueDate);
-  if (due < now) return 'bg-red-500';
-  if (due - now < 24 * 60 * 60 * 1000) return 'bg-orange-500';
-  return 'bg-green-600';
+  if (due < now) return 'bg-red-600';
+  if (due - now < 24 * 60 * 60 * 1000) return 'bg-orange-700';
+  return 'bg-green-700';
 };
 
 const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown, onPromote, onDuplicate, onToggleBlock, canMoveUp, canMoveDown, isMoving, subtasks, onDragStart, onDragEnd, boards = [], onMoveToBoard }) => {
@@ -46,7 +46,7 @@ const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown
             {task.description && (
               <button
                 onClick={() => setExpanded(!expanded)}
-                className="text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0"
+                className="text-slate-400 hover:text-slate-300 transition-colors flex-shrink-0"
                 aria-expanded={expanded}
                 aria-label={expanded ? 'Hide description' : 'Show description'}
               >
@@ -75,7 +75,7 @@ const QueueCard = ({ task, index, onEdit, onView, onDelete, onMoveUp, onMoveDown
         <div className="flex items-center space-x-1">
           <button
             onClick={() => onPromote(task.id)}
-            className="bg-cyan-600 hover:bg-cyan-700 text-white px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
+            className="bg-cyan-700 hover:bg-cyan-800 text-white px-2 py-1 rounded text-xs font-medium transition-colors flex items-center space-x-1"
             title="Promote to Active"
           >
             <Icon name="arrow-up" size={12} />

@@ -20,7 +20,7 @@ const emptyDraft = () => {
 const EntryEditor = ({ draft, setDraft, isRunning, onSave, onCancel, saving }) => (
   <div className="bg-slate-900/60 rounded p-2 space-y-2">
     <div className="grid grid-cols-2 gap-2">
-      <label className="text-[10px] uppercase tracking-wider text-slate-500">
+      <label className="text-[10px] uppercase tracking-wider text-slate-400">
         In
         <input
           type="datetime-local"
@@ -29,7 +29,7 @@ const EntryEditor = ({ draft, setDraft, isRunning, onSave, onCancel, saving }) =
           className={`${inputClass} w-full mt-0.5`}
         />
       </label>
-      <label className="text-[10px] uppercase tracking-wider text-slate-500">
+      <label className="text-[10px] uppercase tracking-wider text-slate-400">
         Out
         {isRunning ? (
           <div className="mt-0.5 px-2 py-1 text-xs text-green-400">Running…</div>
@@ -62,7 +62,7 @@ const EntryEditor = ({ draft, setDraft, isRunning, onSave, onCancel, saving }) =
       <button
         onClick={onSave}
         disabled={saving || !draft.start || (!isRunning && !draft.end)}
-        className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 text-white px-2 py-0.5 rounded text-xs transition-colors"
+        className="bg-cyan-700 hover:bg-cyan-800 disabled:bg-slate-600 text-white px-2 py-0.5 rounded text-xs transition-colors"
       >
         Save
       </button>
@@ -185,7 +185,7 @@ const TimeTracker = ({ task, runningEntry, onStart, onStop, onChanged }) => {
           ) : (
             <button
               onClick={() => onStart(task.id)}
-              className="bg-green-600 hover:bg-green-700 text-white px-2.5 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1"
+              className="bg-green-700 hover:bg-green-800 text-white px-2.5 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1"
             >
               <Icon name="play" size={12} />
               <span>Start timer</span>
@@ -199,9 +199,9 @@ const TimeTracker = ({ task, runningEntry, onStart, onStop, onChanged }) => {
         <div className="flex items-baseline justify-between gap-2">
           <div>
             <span className="text-white text-sm font-medium">{formatMinutes(summary.billedMinutes)}</span>
-            <span className="text-slate-500 text-xs ml-1.5">billed · {formatRawMs(summary.rawMs)} raw</span>
+            <span className="text-slate-400 text-xs ml-1.5">billed · {formatRawMs(summary.rawMs)} raw</span>
             {hasInvoiced && (
-              <div className="text-xs text-slate-500 mt-0.5">
+              <div className="text-xs text-slate-400 mt-0.5">
                 <span className="text-slate-300">{formatMinutes(summary.unbilledMinutes)}</span> unbilled ·{' '}
                 <Icon name="lock" size={10} className="inline -mt-0.5" /> {formatMinutes(summary.invoicedMinutes)} invoiced
               </div>
@@ -210,7 +210,7 @@ const TimeTracker = ({ task, runningEntry, onStart, onStop, onChanged }) => {
           {amount != null && (
             <span className="text-green-400 text-sm font-medium text-right">
               {formatUsd(amount)}
-              {hasInvoiced && <span className="block text-[10px] font-normal text-slate-500">unbilled</span>}
+              {hasInvoiced && <span className="block text-[10px] font-normal text-slate-400">unbilled</span>}
             </span>
           )}
         </div>
@@ -230,7 +230,7 @@ const TimeTracker = ({ task, runningEntry, onStart, onStop, onChanged }) => {
             aria-label="Hourly rate for this task"
           />
           <span>/hr</span>
-          <span className="text-slate-500">
+          <span className="text-slate-400">
             {taskRate != null
               ? 'task override'
               : boardRate != null ? 'board default' : 'no rate set'}
@@ -241,12 +241,12 @@ const TimeTracker = ({ task, runningEntry, onStart, onStop, onChanged }) => {
       {error && <p className="text-red-400 text-xs mb-2" role="alert">{error}</p>}
 
       {loading ? (
-        <p className="text-slate-500 text-xs">Loading…</p>
+        <p className="text-slate-400 text-xs">Loading…</p>
       ) : (
         <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
           {summary.days.map(day => (
             <div key={day.date}>
-              <div className="flex justify-between text-[11px] text-slate-500 mb-1">
+              <div className="flex justify-between text-[11px] text-slate-400 mb-1">
                 <span>{formatDayLabel(day.date)}</span>
                 <span>{formatRawMs(day.rawMs)} → <span className="text-slate-300">{formatMinutes(day.billedMinutes)}</span></span>
               </div>
@@ -267,24 +267,24 @@ const TimeTracker = ({ task, runningEntry, onStart, onStop, onChanged }) => {
                       <span className="whitespace-nowrap">
                         {formatTimeOfDay(entry.startedAt)} – {entry.endedAt ? formatTimeOfDay(entry.endedAt) : <span className="text-green-400">now</span>}
                       </span>
-                      <span className="text-slate-500 whitespace-nowrap">{formatRawMs(entryMs(entry, now))}</span>
+                      <span className="text-slate-400 whitespace-nowrap">{formatRawMs(entryMs(entry, now))}</span>
                       <span className="flex-1 truncate text-slate-400" title={entry.note || ''}>{entry.note}</span>
                       {entry.invoiceId ? (
-                        <span className="text-slate-500" title="Invoiced — locked">
+                        <span className="text-slate-400" title="Invoiced — locked">
                           <Icon name="lock" size={12} />
                         </span>
                       ) : (
                         <>
                           <button
                             onClick={() => startEdit(entry)}
-                            className="text-slate-500 hover:text-cyan-400 transition-colors"
+                            className="text-slate-400 hover:text-cyan-400 transition-colors"
                             aria-label="Edit time entry"
                           >
                             <Icon name="edit-3" size={12} />
                           </button>
                           <button
                             onClick={() => removeEntry(entry.id)}
-                            className="text-slate-500 hover:text-red-400 transition-colors"
+                            className="text-slate-400 hover:text-red-400 transition-colors"
                             aria-label="Delete time entry"
                           >
                             <Icon name="trash-2" size={12} />

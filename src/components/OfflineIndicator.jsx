@@ -19,7 +19,7 @@ const OfflineIndicator = () => {
   if (!isOffline) return null;
 
   return (
-    <div className="bg-amber-600/90 text-white text-center py-1.5 text-sm font-medium">
+    <div className="bg-amber-600/90 text-slate-900 text-center py-1.5 text-sm font-medium">
       You are offline. Showing cached data.
     </div>
   );
